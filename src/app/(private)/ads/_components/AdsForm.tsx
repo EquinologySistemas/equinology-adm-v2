@@ -36,18 +36,27 @@ export function AdsForm({ initialData, onSubmit, onCancel }: AdsFormProps) {
       imageUrl: initialData?.imageUrl ?? "",
       active: initialData?.active !== false,
       displayOrder: initialData?.displayOrder ?? undefined,
-      validFrom: initialData?.validFrom ? initialData.validFrom.slice(0, 10) : "",
-      validUntil: initialData?.validUntil ? initialData.validUntil.slice(0, 10) : "",
+      validFrom: initialData?.validFrom
+        ? initialData.validFrom.slice(0, 10)
+        : "",
+      validUntil: initialData?.validUntil
+        ? initialData.validUntil.slice(0, 10)
+        : "",
     },
   });
 
   return (
-    <form onSubmit={handleSubmit((data) => onSubmit(data))} className="space-y-4">
+    <form
+      onSubmit={handleSubmit((data) => onSubmit(data))}
+      className="space-y-4"
+    >
       <div>
-        <label className="mb-1 block text-sm font-medium text-[var(--dash-text)]">Nome *</label>
+        <label className="mb-1 block text-sm font-medium text-[var(--dash-text)]">
+          Nome *
+        </label>
         <input
           {...register("name")}
-          className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--dash-accent)]/30"
+          className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
           placeholder="Ex: Promoção Black Friday"
         />
         {errors.name && (
@@ -55,23 +64,29 @@ export function AdsForm({ initialData, onSubmit, onCancel }: AdsFormProps) {
         )}
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium text-[var(--dash-text)]">URL de redirecionamento</label>
+        <label className="mb-1 block text-sm font-medium text-[var(--dash-text)]">
+          URL de redirecionamento
+        </label>
         <input
           {...register("redirectUrl")}
           type="url"
-          className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--dash-accent)]/30"
+          className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
           placeholder="https://..."
         />
         {errors.redirectUrl && (
-          <p className="mt-1 text-xs text-red-600">{errors.redirectUrl.message}</p>
+          <p className="mt-1 text-xs text-red-600">
+            {errors.redirectUrl.message}
+          </p>
         )}
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium text-[var(--dash-text)]">URL da imagem *</label>
+        <label className="mb-1 block text-sm font-medium text-[var(--dash-text)]">
+          URL da imagem *
+        </label>
         <input
           {...register("imageUrl")}
           type="url"
-          className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--dash-accent)]/30"
+          className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
           placeholder="https://..."
         />
         {errors.imageUrl && (
@@ -79,29 +94,35 @@ export function AdsForm({ initialData, onSubmit, onCancel }: AdsFormProps) {
         )}
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium text-[var(--dash-text)]">Ordem de exibição</label>
+        <label className="mb-1 block text-sm font-medium text-[var(--dash-text)]">
+          Ordem de exibição
+        </label>
         <input
           type="number"
           {...register("displayOrder")}
           min={0}
-          className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--dash-accent)]/30"
+          className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
         />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="mb-1 block text-sm font-medium text-[var(--dash-text)]">Válido de</label>
+          <label className="mb-1 block text-sm font-medium text-[var(--dash-text)]">
+            Válido de
+          </label>
           <input
             type="date"
             {...register("validFrom")}
-            className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--dash-accent)]/30"
+            className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-[var(--dash-text)]">Válido até</label>
+          <label className="mb-1 block text-sm font-medium text-[var(--dash-text)]">
+            Válido até
+          </label>
           <input
             type="date"
             {...register("validUntil")}
-            className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--dash-accent)]/30"
+            className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
           />
         </div>
       </div>
@@ -112,7 +133,9 @@ export function AdsForm({ initialData, onSubmit, onCancel }: AdsFormProps) {
           {...register("active")}
           className="h-4 w-4 rounded border-[var(--dash-border)] text-[var(--dash-accent)] focus:ring-[var(--dash-accent)]"
         />
-        <label htmlFor="active" className="text-sm text-[var(--dash-text)]">Anúncio ativo</label>
+        <label htmlFor="active" className="text-sm text-[var(--dash-text)]">
+          Anúncio ativo
+        </label>
       </div>
       <div className="flex justify-end gap-2 pt-2">
         <button

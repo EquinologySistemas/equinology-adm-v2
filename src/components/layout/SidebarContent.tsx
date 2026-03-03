@@ -9,7 +9,7 @@ export function SidebarContent({ children }: { children: React.ReactNode }) {
     <div
       className={cn(
         "flex min-h-screen flex-1 flex-col pl-0 transition-[padding] duration-200",
-        collapsed ? "lg:pl-16" : "lg:pl-64"
+        collapsed ? "lg:pl-16" : "lg:pl-64",
       )}
     >
       {children}

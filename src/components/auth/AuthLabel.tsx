@@ -1,21 +1,23 @@
 "use client";
 
-import * as React from "react";
 import { cn } from "@/lib/utils";
+import * as React from "react";
 
-export interface AuthLabelProps extends React.LabelHTMLAttributes<HTMLLabelElement> {}
+interface AuthLabelProps extends React.LabelHTMLAttributes<HTMLLabelElement> {
+  className?: string;
+}
 
 const AuthLabel = React.forwardRef<HTMLLabelElement, AuthLabelProps>(
   ({ className, ...props }, ref) => (
     <label
       ref={ref}
       className={cn(
-        "text-sm font-medium leading-none text-[#27323F] peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
-        className
+        "text-sm leading-none font-medium text-[#27323F] peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
+        className,
       )}
       {...props}
     />
-  )
+  ),
 );
 AuthLabel.displayName = "AuthLabel";
 

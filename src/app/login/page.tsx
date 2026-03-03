@@ -10,7 +10,8 @@ import { AuthInput } from "@/components/auth/AuthInput";
 import { AuthLabel } from "@/components/auth/AuthLabel";
 import { AuthButton } from "@/components/auth/AuthButton";
 
-const TOKEN_COOKIE = process.env.NEXT_PUBLIC_USER_TOKEN || "equinology_admin_token";
+const TOKEN_COOKIE =
+  process.env.NEXT_PUBLIC_USER_TOKEN || "equinology_admin_token";
 const AUTH_API = "/admin/auth/signin";
 
 export default function LoginPage() {
@@ -30,7 +31,7 @@ export default function LoginPage() {
       const { status, body } = await PostAPI(
         AUTH_API,
         { email, password },
-        false
+        false,
       );
       if (status === 200 && body?.accessToken) {
         cookies.set(TOKEN_COOKIE, body.accessToken, { path: "/" });
@@ -40,7 +41,8 @@ export default function LoginPage() {
         setError(
           typeof body?.message === "string"
             ? body.message
-            : body?.message?.[0] || "E-mail ou senha inválidos. Tente novamente."
+            : body?.message?.[0] ||
+                "E-mail ou senha inválidos. Tente novamente.",
         );
       }
     } catch {
@@ -53,7 +55,9 @@ export default function LoginPage() {
   return (
     <AuthLayoutShell
       headerRight={
-        <span className="font-medium text-[#154734]">Painel Administrativo</span>
+        <span className="font-medium text-[#154734]">
+          Painel Administrativo
+        </span>
       }
     >
       <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-[#27323F]/10">

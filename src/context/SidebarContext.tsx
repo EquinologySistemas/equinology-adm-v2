@@ -13,7 +13,9 @@ interface SidebarContextValue {
   toggleCollapsed: () => void;
 }
 
-const SidebarContext = createContext<SidebarContextValue | undefined>(undefined);
+const SidebarContext = createContext<SidebarContextValue | undefined>(
+  undefined,
+);
 
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);

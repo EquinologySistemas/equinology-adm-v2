@@ -46,12 +46,17 @@ export function PlansForm({ initialData, onSubmit, onCancel }: PlansFormProps) {
   });
 
   return (
-    <form onSubmit={handleSubmit((data) => onSubmit(data))} className="space-y-4">
+    <form
+      onSubmit={handleSubmit((data) => onSubmit(data))}
+      className="space-y-4"
+    >
       <div>
-        <label className="mb-1 block text-sm font-medium text-[var(--dash-text)]">Nome *</label>
+        <label className="mb-1 block text-sm font-medium text-[var(--dash-text)]">
+          Nome *
+        </label>
         <input
           {...register("name")}
-          className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--dash-accent)]/30"
+          className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
           placeholder="Ex: Plano Profissional"
         />
         {errors.name && (
@@ -59,74 +64,88 @@ export function PlansForm({ initialData, onSubmit, onCancel }: PlansFormProps) {
         )}
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium text-[var(--dash-text)]">Descrição</label>
+        <label className="mb-1 block text-sm font-medium text-[var(--dash-text)]">
+          Descrição
+        </label>
         <textarea
           {...register("description")}
           rows={2}
-          className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--dash-accent)]/30"
+          className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
           placeholder="Descrição do plano"
         />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="mb-1 block text-sm font-medium text-[var(--dash-text)]">Máx. usuários</label>
+          <label className="mb-1 block text-sm font-medium text-[var(--dash-text)]">
+            Máx. usuários
+          </label>
           <input
             type="number"
             {...register("maxUsers")}
             min={0}
-            className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--dash-accent)]/30"
+            className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-[var(--dash-text)]">Ordem exibição</label>
+          <label className="mb-1 block text-sm font-medium text-[var(--dash-text)]">
+            Ordem exibição
+          </label>
           <input
             type="number"
             {...register("displayOrder")}
             min={0}
-            className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--dash-accent)]/30"
+            className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
           />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="mb-1 block text-sm font-medium text-[var(--dash-text)]">Preço cartão (R$)</label>
+          <label className="mb-1 block text-sm font-medium text-[var(--dash-text)]">
+            Preço cartão (R$)
+          </label>
           <input
             type="number"
             step="0.01"
             {...register("priceCard")}
             min={0}
-            className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--dash-accent)]/30"
+            className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-[var(--dash-text)]">Preço PIX (R$)</label>
+          <label className="mb-1 block text-sm font-medium text-[var(--dash-text)]">
+            Preço PIX (R$)
+          </label>
           <input
             type="number"
             step="0.01"
             {...register("pricePix")}
             min={0}
-            className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--dash-accent)]/30"
+            className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
           />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="mb-1 block text-sm font-medium text-[var(--dash-text)]">Desconto anual (%)</label>
+          <label className="mb-1 block text-sm font-medium text-[var(--dash-text)]">
+            Desconto anual (%)
+          </label>
           <input
             type="number"
             {...register("annualDiscountPercent")}
             min={0}
             max={100}
-            className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--dash-accent)]/30"
+            className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-[var(--dash-text)]">Trial (dias)</label>
+          <label className="mb-1 block text-sm font-medium text-[var(--dash-text)]">
+            Trial (dias)
+          </label>
           <input
             type="number"
             {...register("trialDays")}
             min={0}
-            className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--dash-accent)]/30"
+            className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
           />
         </div>
       </div>
@@ -137,7 +156,9 @@ export function PlansForm({ initialData, onSubmit, onCancel }: PlansFormProps) {
           {...register("active")}
           className="h-4 w-4 rounded border-[var(--dash-border)] text-[var(--dash-accent)] focus:ring-[var(--dash-accent)]"
         />
-        <label htmlFor="active" className="text-sm text-[var(--dash-text)]">Plano ativo</label>
+        <label htmlFor="active" className="text-sm text-[var(--dash-text)]">
+          Plano ativo
+        </label>
       </div>
       <div className="flex justify-end gap-2 pt-2">
         <button

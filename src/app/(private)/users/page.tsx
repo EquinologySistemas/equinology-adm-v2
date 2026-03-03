@@ -24,7 +24,10 @@ export default function UsersPage() {
     const res = await GetAPI(API_USERS, true);
     setLoading(false);
     if (res.status === 200) {
-      const data = res.body?.users ?? res.body?.data ?? (Array.isArray(res.body) ? res.body : []);
+      const data =
+        res.body?.users ??
+        res.body?.data ??
+        (Array.isArray(res.body) ? res.body : []);
       const list = Array.isArray(data) ? data : [];
       const useMock = list.length === 0;
       setUsers(useMock ? mockUsers : list);
@@ -47,7 +50,7 @@ export default function UsersPage() {
         (u) =>
           u.name?.toLowerCase().includes(q) ||
           u.email?.toLowerCase().includes(q) ||
-          u.company?.toLowerCase().includes(q)
+          u.company?.toLowerCase().includes(q),
       );
     }
     if (statusFilter) {
@@ -59,7 +62,9 @@ export default function UsersPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-[var(--dash-text)]">Usuários</h2>
+        <h2 className="text-xl font-semibold text-[var(--dash-text)]">
+          Usuários
+        </h2>
         <p className="mt-1 text-sm text-[var(--dash-text-muted)]">
           Listagem e gestão de usuários do sistema
         </p>
@@ -68,20 +73,20 @@ export default function UsersPage() {
       {isMockData && <MockIndicator />}
 
       <div className="flex flex-wrap items-center gap-4 rounded-xl border border-[var(--dash-border)] bg-white p-4 shadow-sm">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--dash-text-muted)]" />
+        <div className="relative min-w-[200px] flex-1">
+          <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--dash-text-muted)]" />
           <input
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar por nome, e-mail ou empresa..."
-            className="w-full rounded-xl border border-[var(--dash-border)] bg-white py-2.5 pl-9 pr-4 text-sm text-[var(--dash-text)] placeholder:text-[var(--dash-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--dash-accent)]/30"
+            className="w-full rounded-xl border border-[var(--dash-border)] bg-white py-2.5 pr-4 pl-9 text-sm text-[var(--dash-text)] placeholder:text-[var(--dash-text-muted)] focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
           />
         </div>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-xl border border-[var(--dash-border)] bg-white px-4 py-2.5 text-sm text-[var(--dash-text)] focus:outline-none focus:ring-2 focus:ring-[var(--dash-accent)]/30"
+          className="rounded-xl border border-[var(--dash-border)] bg-white px-4 py-2.5 text-sm text-[var(--dash-text)] focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
         >
           <option value="">Todos os status</option>
           <option value="active">Ativo</option>
@@ -89,7 +94,7 @@ export default function UsersPage() {
         </select>
       </div>
 
-      <div className="rounded-xl border border-[var(--dash-border)] bg-white shadow-sm overflow-hidden">
+      <div className="overflow-hidden rounded-xl border border-[var(--dash-border)] bg-white shadow-sm">
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--dash-accent)] border-t-transparent" />
@@ -103,29 +108,59 @@ export default function UsersPage() {
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-[var(--dash-border)] bg-[var(--dash-bg)]/60">
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">Nome</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">E-mail</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">Telefone</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">Empresa</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">Função</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">Plano</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">Status</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">Cadastro</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)] text-right">Ações</th>
+                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
+                    Nome
+                  </th>
+                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
+                    E-mail
+                  </th>
+                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
+                    Telefone
+                  </th>
+                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
+                    Empresa
+                  </th>
+                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
+                    Função
+                  </th>
+                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
+                    Plano
+                  </th>
+                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
+                    Cadastro
+                  </th>
+                  <th className="px-4 py-3 text-right font-semibold text-[var(--dash-text)]">
+                    Ações
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((u) => (
                   <tr
                     key={u.id}
-                    className="border-b border-[var(--dash-border)]/60 hover:bg-[var(--dash-bg)]/40 transition-colors"
+                    className="border-b border-[var(--dash-border)]/60 transition-colors hover:bg-[var(--dash-bg)]/40"
                   >
-                    <td className="px-4 py-3 font-medium text-[var(--dash-text)]">{u.name ?? "—"}</td>
-                    <td className="px-4 py-3 text-[var(--dash-text-muted)]">{u.email ?? "—"}</td>
-                    <td className="px-4 py-3 text-[var(--dash-text-muted)]">{u.phone ?? "—"}</td>
-                    <td className="px-4 py-3 text-[var(--dash-text-muted)]">{u.company ?? "—"}</td>
-                    <td className="px-4 py-3 text-[var(--dash-text-muted)]">{u.role ?? "—"}</td>
-                    <td className="px-4 py-3 text-[var(--dash-text-muted)]">{u.planName ?? "—"}</td>
+                    <td className="px-4 py-3 font-medium text-[var(--dash-text)]">
+                      {u.name ?? "—"}
+                    </td>
+                    <td className="px-4 py-3 text-[var(--dash-text-muted)]">
+                      {u.email ?? "—"}
+                    </td>
+                    <td className="px-4 py-3 text-[var(--dash-text-muted)]">
+                      {u.phone ?? "—"}
+                    </td>
+                    <td className="px-4 py-3 text-[var(--dash-text-muted)]">
+                      {u.company ?? "—"}
+                    </td>
+                    <td className="px-4 py-3 text-[var(--dash-text-muted)]">
+                      {u.role ?? "—"}
+                    </td>
+                    <td className="px-4 py-3 text-[var(--dash-text-muted)]">
+                      {u.planName ?? "—"}
+                    </td>
                     <td className="px-4 py-3">
                       <span
                         className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
@@ -134,7 +169,9 @@ export default function UsersPage() {
                             : "bg-red-100 text-red-800"
                         }`}
                       >
-                        {(u.status ?? "active") === "active" ? "Ativo" : "Bloqueado"}
+                        {(u.status ?? "active") === "active"
+                          ? "Ativo"
+                          : "Bloqueado"}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-[var(--dash-text-muted)]">
@@ -170,37 +207,67 @@ export default function UsersPage() {
           <div className="space-y-4">
             <dl className="grid gap-3 text-sm">
               <div>
-                <dt className="font-medium text-[var(--dash-text-muted)]">Nome</dt>
-                <dd className="text-[var(--dash-text)]">{detailUser.name ?? "—"}</dd>
-              </div>
-              <div>
-                <dt className="font-medium text-[var(--dash-text-muted)]">E-mail</dt>
-                <dd className="text-[var(--dash-text)]">{detailUser.email ?? "—"}</dd>
-              </div>
-              <div>
-                <dt className="font-medium text-[var(--dash-text-muted)]">Telefone</dt>
-                <dd className="text-[var(--dash-text)]">{detailUser.phone ?? "—"}</dd>
-              </div>
-              <div>
-                <dt className="font-medium text-[var(--dash-text-muted)]">Empresa</dt>
-                <dd className="text-[var(--dash-text)]">{detailUser.company ?? "—"}</dd>
-              </div>
-              <div>
-                <dt className="font-medium text-[var(--dash-text-muted)]">Função</dt>
-                <dd className="text-[var(--dash-text)]">{detailUser.role ?? "—"}</dd>
-              </div>
-              <div>
-                <dt className="font-medium text-[var(--dash-text-muted)]">Plano</dt>
-                <dd className="text-[var(--dash-text)]">{detailUser.planName ?? "—"}</dd>
-              </div>
-              <div>
-                <dt className="font-medium text-[var(--dash-text-muted)]">Status</dt>
+                <dt className="font-medium text-[var(--dash-text-muted)]">
+                  Nome
+                </dt>
                 <dd className="text-[var(--dash-text)]">
-                  {(detailUser.status ?? "active") === "active" ? "Ativo" : "Bloqueado"}
+                  {detailUser.name ?? "—"}
                 </dd>
               </div>
               <div>
-                <dt className="font-medium text-[var(--dash-text-muted)]">Data de cadastro</dt>
+                <dt className="font-medium text-[var(--dash-text-muted)]">
+                  E-mail
+                </dt>
+                <dd className="text-[var(--dash-text)]">
+                  {detailUser.email ?? "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="font-medium text-[var(--dash-text-muted)]">
+                  Telefone
+                </dt>
+                <dd className="text-[var(--dash-text)]">
+                  {detailUser.phone ?? "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="font-medium text-[var(--dash-text-muted)]">
+                  Empresa
+                </dt>
+                <dd className="text-[var(--dash-text)]">
+                  {detailUser.company ?? "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="font-medium text-[var(--dash-text-muted)]">
+                  Função
+                </dt>
+                <dd className="text-[var(--dash-text)]">
+                  {detailUser.role ?? "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="font-medium text-[var(--dash-text-muted)]">
+                  Plano
+                </dt>
+                <dd className="text-[var(--dash-text)]">
+                  {detailUser.planName ?? "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="font-medium text-[var(--dash-text-muted)]">
+                  Status
+                </dt>
+                <dd className="text-[var(--dash-text)]">
+                  {(detailUser.status ?? "active") === "active"
+                    ? "Ativo"
+                    : "Bloqueado"}
+                </dd>
+              </div>
+              <div>
+                <dt className="font-medium text-[var(--dash-text-muted)]">
+                  Data de cadastro
+                </dt>
                 <dd className="text-[var(--dash-text)]">
                   {detailUser.createdAt
                     ? new Date(detailUser.createdAt).toLocaleString("pt-BR")
@@ -209,7 +276,8 @@ export default function UsersPage() {
               </div>
             </dl>
             <p className="text-xs text-[var(--dash-text-muted)]">
-              Edição e bloqueio podem ser habilitados quando a API expuser os endpoints correspondentes.
+              Edição e bloqueio podem ser habilitados quando a API expuser os
+              endpoints correspondentes.
             </p>
           </div>
         )}

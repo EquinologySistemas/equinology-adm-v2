@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const TOKEN_COOKIE = process.env.NEXT_PUBLIC_USER_TOKEN || "equinology_admin_token";
+const TOKEN_COOKIE =
+  process.env.NEXT_PUBLIC_USER_TOKEN || "equinology_admin_token";
 
 export function middleware(request: NextRequest) {
   const token = request.cookies.get(TOKEN_COOKIE)?.value;

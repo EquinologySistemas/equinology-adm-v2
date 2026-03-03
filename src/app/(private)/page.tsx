@@ -92,16 +92,36 @@ export default function DashboardPage() {
 
         if (cancelled) return;
 
-        const users = usersRes.status === 200 ? usersRes.body?.users ?? [] : [];
-        const plans = plansRes.status === 200 ? (Array.isArray(plansRes.body) ? plansRes.body : plansRes.body?.plans ?? []) : [];
-        const coupons = couponsRes.status === 200 ? (Array.isArray(couponsRes.body) ? couponsRes.body : couponsRes.body?.coupons ?? []) : [];
-        const ads = adsRes.status === 200 ? (Array.isArray(adsRes.body) ? adsRes.body : adsRes.body?.advertisements ?? []) : [];
+        const users =
+          usersRes.status === 200 ? (usersRes.body?.users ?? []) : [];
+        const plans =
+          plansRes.status === 200
+            ? Array.isArray(plansRes.body)
+              ? plansRes.body
+              : (plansRes.body?.plans ?? [])
+            : [];
+        const coupons =
+          couponsRes.status === 200
+            ? Array.isArray(couponsRes.body)
+              ? couponsRes.body
+              : (couponsRes.body?.coupons ?? [])
+            : [];
+        const ads =
+          adsRes.status === 200
+            ? Array.isArray(adsRes.body)
+              ? adsRes.body
+              : (adsRes.body?.advertisements ?? [])
+            : [];
 
         const plansList = Array.isArray(plans) ? plans : [];
-        const activePlans = plansList.filter((p: { active?: boolean }) => p.active !== false);
+        const activePlans = plansList.filter(
+          (p: { active?: boolean }) => p.active !== false,
+        );
 
         const adsList = Array.isArray(ads) ? ads : [];
-        const activeAds = adsList.filter((a: { active?: boolean }) => a.active !== false);
+        const activeAds = adsList.filter(
+          (a: { active?: boolean }) => a.active !== false,
+        );
 
         const hasRealKpis = false;
         setMetrics((prev) => ({
@@ -110,10 +130,16 @@ export default function DashboardPage() {
           plansActive: activePlans.length,
           couponsTotal: Array.isArray(coupons) ? coupons.length : 0,
           adsActive: activeAds.length,
-          subscriptionsActive: hasRealKpis ? 0 : mockDashboardKpis.subscriptionsActive,
+          subscriptionsActive: hasRealKpis
+            ? 0
+            : mockDashboardKpis.subscriptionsActive,
           mrr: hasRealKpis ? 0 : mockDashboardKpis.mrr,
-          subscriptionsNewMonth: hasRealKpis ? 0 : mockDashboardKpis.subscriptionsNewMonth,
-          subscriptionsCancelledMonth: hasRealKpis ? 0 : mockDashboardKpis.subscriptionsCancelledMonth,
+          subscriptionsNewMonth: hasRealKpis
+            ? 0
+            : mockDashboardKpis.subscriptionsNewMonth,
+          subscriptionsCancelledMonth: hasRealKpis
+            ? 0
+            : mockDashboardKpis.subscriptionsCancelledMonth,
           churnRate: hasRealKpis ? 0 : mockDashboardKpis.churnRate,
         }));
       } catch {

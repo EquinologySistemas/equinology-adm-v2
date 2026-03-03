@@ -3,10 +3,7 @@
 import { useEffect, useState } from "react";
 import { useApiContext } from "@/context/ApiContext";
 import { MockIndicator } from "@/components/ui/MockIndicator";
-import {
-  mockTransactions,
-  mockFinancialSummary,
-} from "@/data/mock";
+import { mockTransactions, mockFinancialSummary } from "@/data/mock";
 import { DollarSign } from "lucide-react";
 import type { Transaction } from "@/types/admin";
 
@@ -23,7 +20,10 @@ const statusLabels: Record<string, string> = {
 export default function FinancialPage() {
   const { GetAPI } = useApiContext();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [summary, setSummary] = useState<{ mrr?: number; revenueMonth?: number } | null>(null);
+  const [summary, setSummary] = useState<{
+    mrr?: number;
+    revenueMonth?: number;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [isMockData, setIsMockData] = useState(false);
 
@@ -36,7 +36,10 @@ export default function FinancialPage() {
     setLoading(false);
     let mockTx = false;
     if (txRes.status === 200) {
-      const data = txRes.body?.transactions ?? txRes.body?.data ?? (Array.isArray(txRes.body) ? txRes.body : []);
+      const data =
+        txRes.body?.transactions ??
+        txRes.body?.data ??
+        (Array.isArray(txRes.body) ? txRes.body : []);
       const list = Array.isArray(data) ? data : [];
       mockTx = list.length === 0;
       setTransactions(mockTx ? mockTransactions : list);
@@ -60,7 +63,9 @@ export default function FinancialPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-[var(--dash-text)]">Financeiro</h2>
+        <h2 className="text-xl font-semibold text-[var(--dash-text)]">
+          Financeiro
+        </h2>
         <p className="mt-1 text-sm text-[var(--dash-text-muted)]">
           Transações e resumo financeiro
         </p>
@@ -72,24 +77,34 @@ export default function FinancialPage() {
         <div className="grid gap-4 sm:grid-cols-2">
           {summary.mrr != null && (
             <div className="rounded-xl border border-[var(--dash-border)] bg-white p-5 shadow-sm">
-              <p className="text-sm font-medium text-[var(--dash-text-muted)]">MRR</p>
+              <p className="text-sm font-medium text-[var(--dash-text-muted)]">
+                MRR
+              </p>
               <p className="mt-1 text-2xl font-semibold text-[var(--dash-text)]">
-                {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(summary.mrr)}
+                {new Intl.NumberFormat("pt-BR", {
+                  style: "currency",
+                  currency: "BRL",
+                }).format(summary.mrr)}
               </p>
             </div>
           )}
           {summary.revenueMonth != null && (
             <div className="rounded-xl border border-[var(--dash-border)] bg-white p-5 shadow-sm">
-              <p className="text-sm font-medium text-[var(--dash-text-muted)]">Receita do mês</p>
+              <p className="text-sm font-medium text-[var(--dash-text-muted)]">
+                Receita do mês
+              </p>
               <p className="mt-1 text-2xl font-semibold text-[var(--dash-text)]">
-                {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(summary.revenueMonth)}
+                {new Intl.NumberFormat("pt-BR", {
+                  style: "currency",
+                  currency: "BRL",
+                }).format(summary.revenueMonth)}
               </p>
             </div>
           )}
         </div>
       )}
 
-      <div className="rounded-xl border border-[var(--dash-border)] bg-white shadow-sm overflow-hidden">
+      <div className="overflow-hidden rounded-xl border border-[var(--dash-border)] bg-white shadow-sm">
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--dash-accent)] border-t-transparent" />
@@ -98,7 +113,8 @@ export default function FinancialPage() {
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <DollarSign className="mb-4 h-12 w-12 text-[var(--dash-text-muted)]/50" />
             <p className="text-sm text-[var(--dash-text-muted)]">
-              Nenhuma transação encontrada. Os dados aparecerão aqui quando a API expuser o endpoint de transações.
+              Nenhuma transação encontrada. Os dados aparecerão aqui quando a
+              API expuser o endpoint de transações.
             </p>
           </div>
         ) : (
@@ -106,24 +122,39 @@ export default function FinancialPage() {
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-[var(--dash-border)] bg-[var(--dash-bg)]/60">
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">Data</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">Valor</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">Status</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">Forma de pagamento</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">Pago em</th>
+                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
+                    Data
+                  </th>
+                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
+                    Valor
+                  </th>
+                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
+                    Forma de pagamento
+                  </th>
+                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
+                    Pago em
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {transactions.map((t) => (
                   <tr
                     key={t.id}
-                    className="border-b border-[var(--dash-border)]/60 hover:bg-[var(--dash-bg)]/40 transition-colors"
+                    className="border-b border-[var(--dash-border)]/60 transition-colors hover:bg-[var(--dash-bg)]/40"
                   >
                     <td className="px-4 py-3 text-[var(--dash-text-muted)]">
-                      {t.createdAt ? new Date(t.createdAt).toLocaleDateString("pt-BR") : "—"}
+                      {t.createdAt
+                        ? new Date(t.createdAt).toLocaleDateString("pt-BR")
+                        : "—"}
                     </td>
                     <td className="px-4 py-3 font-medium text-[var(--dash-text)]">
-                      {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(t.amount)}
+                      {new Intl.NumberFormat("pt-BR", {
+                        style: "currency",
+                        currency: "BRL",
+                      }).format(t.amount)}
                     </td>
                     <td className="px-4 py-3">
                       <span
@@ -138,9 +169,13 @@ export default function FinancialPage() {
                         {statusLabels[t.status] ?? t.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-[var(--dash-text-muted)]">{t.paymentMethod ?? "—"}</td>
                     <td className="px-4 py-3 text-[var(--dash-text-muted)]">
-                      {t.paidAt ? new Date(t.paidAt).toLocaleDateString("pt-BR") : "—"}
+                      {t.paymentMethod ?? "—"}
+                    </td>
+                    <td className="px-4 py-3 text-[var(--dash-text-muted)]">
+                      {t.paidAt
+                        ? new Date(t.paidAt).toLocaleDateString("pt-BR")
+                        : "—"}
                     </td>
                   </tr>
                 ))}

@@ -64,17 +64,17 @@ export function Sidebar() {
         onClick={closeOverlay}
         className={cn(
           "fixed inset-0 z-40 bg-black/50 transition-opacity duration-200 lg:hidden",
-          open ? "opacity-100" : "pointer-events-none opacity-0"
+          open ? "opacity-100" : "pointer-events-none opacity-0",
         )}
       />
 
       <aside
         className={cn(
-          "fixed left-0 top-0 z-50 flex h-screen shrink-0 flex-col border-r border-white/10 bg-[var(--sidebar-bg)] text-[var(--sidebar-text)] transition-[width,transform] duration-200 ease-out",
+          "fixed top-0 left-0 z-50 flex h-screen shrink-0 flex-col border-r border-white/10 bg-[var(--sidebar-bg)] text-[var(--sidebar-text)] transition-[width,transform] duration-200 ease-out",
           "w-64 lg:translate-x-0",
           collapsed && "lg:w-16",
           !collapsed && "lg:w-64",
-          open ? "translate-x-0" : "-translate-x-full"
+          open ? "translate-x-0" : "-translate-x-full",
         )}
         aria-label="Navegação principal"
       >
@@ -83,7 +83,9 @@ export function Sidebar() {
           <div
             className={cn(
               "flex h-16 shrink-0 items-center border-b border-white/10 transition-[padding]",
-              collapsed ? "justify-center px-0 lg:px-0" : "justify-between gap-2 px-4 lg:px-3"
+              collapsed
+                ? "justify-center px-0 lg:px-0"
+                : "justify-between gap-2 px-4 lg:px-3",
             )}
           >
             {!collapsed && (
@@ -134,10 +136,11 @@ export function Sidebar() {
                   onClick={closeOverlay}
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                    collapsed && "justify-center px-2 lg:justify-center lg:px-2",
+                    collapsed &&
+                      "justify-center px-2 lg:justify-center lg:px-2",
                     isActive
                       ? "bg-white/15 text-white"
-                      : "text-white/80 hover:bg-[var(--sidebar-hover)] hover:text-white"
+                      : "text-white/80 hover:bg-[var(--sidebar-hover)] hover:text-white",
                   )}
                   title={collapsed ? item.label : undefined}
                 >

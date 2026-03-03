@@ -23,7 +23,9 @@ export default function AdsPage() {
     const res = await GetAPI(API_ADS, true);
     setLoading(false);
     if (res.status === 200) {
-      const data = Array.isArray(res.body) ? res.body : res.body?.advertisements ?? res.body?.ads ?? res.body?.data ?? [];
+      const data = Array.isArray(res.body)
+        ? res.body
+        : (res.body?.advertisements ?? res.body?.ads ?? res.body?.data ?? []);
       setAds(Array.isArray(data) ? data : []);
     } else {
       toast.error("Erro ao carregar anúncios.");
@@ -74,7 +76,9 @@ export default function AdsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-[var(--dash-text)]">Anúncios</h2>
+          <h2 className="text-xl font-semibold text-[var(--dash-text)]">
+            Anúncios
+          </h2>
           <p className="mt-1 text-sm text-[var(--dash-text-muted)]">
             Gerencie anúncios e banners
           </p>
@@ -89,7 +93,7 @@ export default function AdsPage() {
         </button>
       </div>
 
-      <div className="rounded-xl border border-[var(--dash-border)] bg-white shadow-sm overflow-hidden">
+      <div className="overflow-hidden rounded-xl border border-[var(--dash-border)] bg-white shadow-sm">
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--dash-accent)] border-t-transparent" />
@@ -103,33 +107,45 @@ export default function AdsPage() {
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-[var(--dash-border)] bg-[var(--dash-bg)]/60">
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">Preview</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">Nome</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">Link</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">Ativo</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)] text-right">Ações</th>
+                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
+                    Preview
+                  </th>
+                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
+                    Nome
+                  </th>
+                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
+                    Link
+                  </th>
+                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
+                    Ativo
+                  </th>
+                  <th className="px-4 py-3 text-right font-semibold text-[var(--dash-text)]">
+                    Ações
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {ads.map((ad) => (
                   <tr
                     key={ad.id}
-                    className="border-b border-[var(--dash-border)]/60 hover:bg-[var(--dash-bg)]/40 transition-colors"
+                    className="border-b border-[var(--dash-border)]/60 transition-colors hover:bg-[var(--dash-bg)]/40"
                   >
                     <td className="px-4 py-3">
                       {ad.imageUrl ? (
                         <img
                           src={ad.imageUrl}
                           alt=""
-                          className="h-12 w-20 rounded-lg object-cover bg-[var(--dash-bg)]"
+                          className="h-12 w-20 rounded-lg bg-[var(--dash-bg)] object-cover"
                         />
                       ) : (
-                        <div className="h-12 w-20 rounded-lg bg-[var(--dash-bg)] flex items-center justify-center text-[var(--dash-text-muted)] text-xs">
+                        <div className="flex h-12 w-20 items-center justify-center rounded-lg bg-[var(--dash-bg)] text-xs text-[var(--dash-text-muted)]">
                           Sem imagem
                         </div>
                       )}
                     </td>
-                    <td className="px-4 py-3 font-medium text-[var(--dash-text)]">{ad.name}</td>
+                    <td className="px-4 py-3 font-medium text-[var(--dash-text)]">
+                      {ad.name}
+                    </td>
                     <td className="px-4 py-3">
                       {ad.redirectUrl ? (
                         <a
@@ -147,7 +163,9 @@ export default function AdsPage() {
                     <td className="px-4 py-3">
                       <span
                         className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                          ad.active !== false ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"
+                          ad.active !== false
+                            ? "bg-green-100 text-green-800"
+                            : "bg-gray-100 text-gray-600"
                         }`}
                       >
                         {ad.active !== false ? "Sim" : "Não"}
@@ -182,11 +200,22 @@ export default function AdsPage() {
         )}
       </div>
 
-      <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Novo anúncio">
-        <AdsForm onSubmit={handleCreate} onCancel={() => setCreateOpen(false)} />
+      <Modal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        title="Novo anúncio"
+      >
+        <AdsForm
+          onSubmit={handleCreate}
+          onCancel={() => setCreateOpen(false)}
+        />
       </Modal>
 
-      <Modal open={!!editingAd} onClose={() => setEditingAd(null)} title="Editar anúncio">
+      <Modal
+        open={!!editingAd}
+        onClose={() => setEditingAd(null)}
+        title="Editar anúncio"
+      >
         {editingAd && (
           <AdsForm
             initialData={editingAd}

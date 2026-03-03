@@ -12,7 +12,13 @@ interface ModalProps {
   className?: string;
 }
 
-export function Modal({ open, onClose, title, children, className }: ModalProps) {
+export function Modal({
+  open,
+  onClose,
+  title,
+  children,
+  className,
+}: ModalProps) {
   useEffect(() => {
     if (!open) return;
     const handleEscape = (e: KeyboardEvent) => {
@@ -42,8 +48,8 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
       />
       <div
         className={cn(
-          "relative z-10 w-full max-w-lg max-h-[90vh] overflow-hidden rounded-2xl border border-[var(--dash-border)] bg-white shadow-xl",
-          className
+          "relative z-10 max-h-[90vh] w-full max-w-lg overflow-hidden rounded-2xl border border-[var(--dash-border)] bg-white shadow-xl",
+          className,
         )}
       >
         <div className="flex items-center justify-between border-b border-[var(--dash-border)] bg-[var(--dash-bg)]/60 px-5 py-4">
@@ -62,7 +68,7 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="overflow-y-auto max-h-[calc(90vh-4.5rem)] p-5">
+        <div className="max-h-[calc(90vh-4.5rem)] overflow-y-auto p-5">
           {children}
         </div>
       </div>

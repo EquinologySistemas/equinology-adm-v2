@@ -24,7 +24,9 @@ export default function PlansPage() {
     const res = await GetAPI(API_PLANS, true);
     setLoading(false);
     if (res.status === 200) {
-      const data = Array.isArray(res.body) ? res.body : res.body?.plans ?? res.body?.data ?? [];
+      const data = Array.isArray(res.body)
+        ? res.body
+        : (res.body?.plans ?? res.body?.data ?? []);
       setPlans(Array.isArray(data) ? data : []);
     } else {
       toast.error("Erro ao carregar planos.");
@@ -59,7 +61,8 @@ export default function PlansPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Excluir este plano? Assinaturas ativas podem ser afetadas.")) return;
+    if (!confirm("Excluir este plano? Assinaturas ativas podem ser afetadas."))
+      return;
     setDeletingId(id);
     const res = await DeleteAPI(`${API_PLANS_DELETE}/${id}`, true);
     setDeletingId(null);
@@ -75,7 +78,9 @@ export default function PlansPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-[var(--dash-text)]">Planos</h2>
+          <h2 className="text-xl font-semibold text-[var(--dash-text)]">
+            Planos
+          </h2>
           <p className="mt-1 text-sm text-[var(--dash-text-muted)]">
             Gerencie os planos de assinatura
           </p>
@@ -90,7 +95,7 @@ export default function PlansPage() {
         </button>
       </div>
 
-      <div className="rounded-xl border border-[var(--dash-border)] bg-white shadow-sm overflow-hidden">
+      <div className="overflow-hidden rounded-xl border border-[var(--dash-border)] bg-white shadow-sm">
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--dash-accent)] border-t-transparent" />
@@ -104,32 +109,52 @@ export default function PlansPage() {
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-[var(--dash-border)] bg-[var(--dash-bg)]/60">
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">Nome</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">Usuários</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">Preço cartão</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">Preço PIX</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">Ativo</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)] text-right">Ações</th>
+                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
+                    Nome
+                  </th>
+                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
+                    Usuários
+                  </th>
+                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
+                    Preço cartão
+                  </th>
+                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
+                    Preço PIX
+                  </th>
+                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
+                    Ativo
+                  </th>
+                  <th className="px-4 py-3 text-right font-semibold text-[var(--dash-text)]">
+                    Ações
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {plans.map((plan) => (
                   <tr
                     key={plan.id}
-                    className="border-b border-[var(--dash-border)]/60 hover:bg-[var(--dash-bg)]/40 transition-colors"
+                    className="border-b border-[var(--dash-border)]/60 transition-colors hover:bg-[var(--dash-bg)]/40"
                   >
-                    <td className="px-4 py-3 font-medium text-[var(--dash-text)]">{plan.name}</td>
+                    <td className="px-4 py-3 font-medium text-[var(--dash-text)]">
+                      {plan.name}
+                    </td>
                     <td className="px-4 py-3 text-[var(--dash-text-muted)]">
                       {plan.maxUsers ?? "—"}
                     </td>
                     <td className="px-4 py-3 text-[var(--dash-text-muted)]">
                       {plan.priceCard != null
-                        ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(plan.priceCard)
+                        ? new Intl.NumberFormat("pt-BR", {
+                            style: "currency",
+                            currency: "BRL",
+                          }).format(plan.priceCard)
                         : "—"}
                     </td>
                     <td className="px-4 py-3 text-[var(--dash-text-muted)]">
                       {plan.pricePix != null
-                        ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(plan.pricePix)
+                        ? new Intl.NumberFormat("pt-BR", {
+                            style: "currency",
+                            currency: "BRL",
+                          }).format(plan.pricePix)
                         : "—"}
                     </td>
                     <td className="px-4 py-3">
@@ -172,8 +197,15 @@ export default function PlansPage() {
         )}
       </div>
 
-      <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Novo plano">
-        <PlansForm onSubmit={handleCreate} onCancel={() => setCreateOpen(false)} />
+      <Modal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        title="Novo plano"
+      >
+        <PlansForm
+          onSubmit={handleCreate}
+          onCancel={() => setCreateOpen(false)}
+        />
       </Modal>
 
       <Modal

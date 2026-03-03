@@ -28,13 +28,18 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-[var(--dash-text)]">Configurações</h2>
+        <h2 className="text-xl font-semibold text-[var(--dash-text)]">
+          Configurações
+        </h2>
         <p className="mt-1 text-sm text-[var(--dash-text-muted)]">
           Configurações globais do produto
         </p>
       </div>
 
-      <form onSubmit={handleSave} className="max-w-xl space-y-6 rounded-xl border border-[var(--dash-border)] bg-white p-6 shadow-sm">
+      <form
+        onSubmit={handleSave}
+        className="max-w-xl space-y-6 rounded-xl border border-[var(--dash-border)] bg-white p-6 shadow-sm"
+      >
         <div>
           <label className="mb-1 block text-sm font-medium text-[var(--dash-text)]">
             Nome do produto
@@ -43,7 +48,7 @@ export default function SettingsPage() {
             type="text"
             value={productName}
             onChange={(e) => setProductName(e.target.value)}
-            className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--dash-accent)]/30"
+            className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
             placeholder="Equinology"
           />
         </div>
@@ -55,7 +60,7 @@ export default function SettingsPage() {
             type="url"
             value={termsUrl}
             onChange={(e) => setTermsUrl(e.target.value)}
-            className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--dash-accent)]/30"
+            className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
             placeholder="https://..."
           />
         </div>
@@ -67,7 +72,7 @@ export default function SettingsPage() {
             type="url"
             value={privacyUrl}
             onChange={(e) => setPrivacyUrl(e.target.value)}
-            className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--dash-accent)]/30"
+            className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
             placeholder="https://..."
           />
         </div>
@@ -79,7 +84,7 @@ export default function SettingsPage() {
             type="url"
             value={supportUrl}
             onChange={(e) => setSupportUrl(e.target.value)}
-            className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--dash-accent)]/30"
+            className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
             placeholder="https://..."
           />
         </div>
@@ -91,7 +96,10 @@ export default function SettingsPage() {
             onChange={(e) => setMaintenanceMode(e.target.checked)}
             className="h-4 w-4 rounded border-[var(--dash-border)] text-[var(--dash-accent)] focus:ring-[var(--dash-accent)]"
           />
-          <label htmlFor="maintenance" className="text-sm text-[var(--dash-text)]">
+          <label
+            htmlFor="maintenance"
+            className="text-sm text-[var(--dash-text)]"
+          >
             Modo manutenção (exibe aviso para usuários)
           </label>
         </div>

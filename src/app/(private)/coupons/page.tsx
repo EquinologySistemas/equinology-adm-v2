@@ -23,7 +23,9 @@ export default function CouponsPage() {
     const res = await GetAPI(API_COUPONS, true);
     setLoading(false);
     if (res.status === 200) {
-      const data = Array.isArray(res.body) ? res.body : res.body?.coupons ?? res.body?.data ?? [];
+      const data = Array.isArray(res.body)
+        ? res.body
+        : (res.body?.coupons ?? res.body?.data ?? []);
       setCoupons(Array.isArray(data) ? data : []);
     } else {
       toast.error("Erro ao carregar cupons.");
@@ -72,14 +74,19 @@ export default function CouponsPage() {
 
   function formatValue(c: Coupon) {
     if (c.type === "percent") return `${c.value}%`;
-    return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(c.value);
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(c.value);
   }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-[var(--dash-text)]">Cupons</h2>
+          <h2 className="text-xl font-semibold text-[var(--dash-text)]">
+            Cupons
+          </h2>
           <p className="mt-1 text-sm text-[var(--dash-text-muted)]">
             Gerencie cupons de desconto
           </p>
@@ -94,7 +101,7 @@ export default function CouponsPage() {
         </button>
       </div>
 
-      <div className="rounded-xl border border-[var(--dash-border)] bg-white shadow-sm overflow-hidden">
+      <div className="overflow-hidden rounded-xl border border-[var(--dash-border)] bg-white shadow-sm">
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--dash-accent)] border-t-transparent" />
@@ -108,36 +115,58 @@ export default function CouponsPage() {
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-[var(--dash-border)] bg-[var(--dash-bg)]/60">
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">Código</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">Tipo</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">Valor</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">Usos</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">Validade</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">Ativo</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)] text-right">Ações</th>
+                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
+                    Código
+                  </th>
+                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
+                    Tipo
+                  </th>
+                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
+                    Valor
+                  </th>
+                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
+                    Usos
+                  </th>
+                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
+                    Validade
+                  </th>
+                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
+                    Ativo
+                  </th>
+                  <th className="px-4 py-3 text-right font-semibold text-[var(--dash-text)]">
+                    Ações
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {coupons.map((c) => (
                   <tr
                     key={c.id}
-                    className="border-b border-[var(--dash-border)]/60 hover:bg-[var(--dash-bg)]/40 transition-colors"
+                    className="border-b border-[var(--dash-border)]/60 transition-colors hover:bg-[var(--dash-bg)]/40"
                   >
-                    <td className="px-4 py-3 font-medium text-[var(--dash-text)] uppercase">{c.code}</td>
+                    <td className="px-4 py-3 font-medium text-[var(--dash-text)] uppercase">
+                      {c.code}
+                    </td>
                     <td className="px-4 py-3 text-[var(--dash-text-muted)]">
                       {c.type === "percent" ? "Percentual" : "Fixo"}
                     </td>
-                    <td className="px-4 py-3 text-[var(--dash-text-muted)]">{formatValue(c)}</td>
                     <td className="px-4 py-3 text-[var(--dash-text-muted)]">
-                      {(c.currentUses ?? 0)} / {(c.maxUses ?? "—")}
+                      {formatValue(c)}
                     </td>
                     <td className="px-4 py-3 text-[var(--dash-text-muted)]">
-                      {c.validUntil ? new Date(c.validUntil).toLocaleDateString("pt-BR") : "—"}
+                      {c.currentUses ?? 0} / {c.maxUses ?? "—"}
+                    </td>
+                    <td className="px-4 py-3 text-[var(--dash-text-muted)]">
+                      {c.validUntil
+                        ? new Date(c.validUntil).toLocaleDateString("pt-BR")
+                        : "—"}
                     </td>
                     <td className="px-4 py-3">
                       <span
                         className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                          c.active !== false ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"
+                          c.active !== false
+                            ? "bg-green-100 text-green-800"
+                            : "bg-gray-100 text-gray-600"
                         }`}
                       >
                         {c.active !== false ? "Sim" : "Não"}
@@ -172,8 +201,15 @@ export default function CouponsPage() {
         )}
       </div>
 
-      <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Novo cupom">
-        <CouponsForm onSubmit={handleCreate} onCancel={() => setCreateOpen(false)} />
+      <Modal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        title="Novo cupom"
+      >
+        <CouponsForm
+          onSubmit={handleCreate}
+          onCancel={() => setCreateOpen(false)}
+        />
       </Modal>
 
       <Modal

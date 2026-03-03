@@ -9,7 +9,10 @@ interface MockIndicatorProps {
   className?: string;
 }
 
-export function MockIndicator({ variant = "banner", className = "" }: MockIndicatorProps) {
+export function MockIndicator({
+  variant = "banner",
+  className = "",
+}: MockIndicatorProps) {
   const label = "Dados demonstrativos (mock) para validação de UX/UI";
 
   if (variant === "badge") {
