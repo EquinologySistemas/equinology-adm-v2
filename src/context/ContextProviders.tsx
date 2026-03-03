@@ -1,3 +1,4 @@
+import { Toaster } from "react-hot-toast";
 import { CookiesProvider } from "next-client-cookies/server";
 import { ApiContextProvider } from "./ApiContext";
 import { SampleContextProvider } from "./SampleContext";
@@ -8,9 +9,8 @@ export function ContextProviders({ children }: { children: React.ReactNode }) {
       <CookiesProvider>
         <ApiContextProvider>
           <SampleContextProvider>
-            {/* Any other Context Providers */}
             {children}
-            {/* Any other Context Providers */}
+            <Toaster position="top-right" />
           </SampleContextProvider>
         </ApiContextProvider>
       </CookiesProvider>

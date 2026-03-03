@@ -1,64 +1,32 @@
-"use server";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
-import { cookies } from "next/headers";
-import { NextRequest, NextResponse } from "next/server";
-export const config = {
-  matcher: ["/", "/sample/:path*"],
-};
+const TOKEN_COOKIE = process.env.NEXT_PUBLIC_USER_TOKEN || "equinology_admin_token";
 
-export async function middleware(req: NextRequest) {
-  const loginVerifyAPI = async (token: string) => {
-    const baseURL = process.env.NEXT_PUBLIC_API_URL;
-    if (!token) {
-      return {
-        status: 400,
-        body: null,
-      };
+export function middleware(request: NextRequest) {
+  const token = request.cookies.get(TOKEN_COOKIE)?.value;
+
+  if (request.nextUrl.pathname === "/login") {
+    if (token) {
+      return NextResponse.redirect(new URL("/", request.url));
     }
-
-    const config = {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "ngrok-skip-browser-warning": "any",
-      },
-    };
-
-    const connect = await fetch(`${baseURL}/user/token`, {
-      method: "PATCH",
-      headers: config.headers,
-    });
-
-    const data = await connect.json();
-    const status = connect.status;
-    return {
-      status,
-      body: data,
-    };
-  };
-
-  if (
-    req.nextUrl.pathname.indexOf("icon") > -1 ||
-    req.nextUrl.pathname.indexOf("chrome") > -1
-  )
     return NextResponse.next();
-
-  const cookieStore = await cookies();
-  const Token = process.env.NEXT_PUBLIC_USER_TOKEN;
-  if (!Token) return NextResponse.redirect(new URL("/login", req.url));
-  const token = cookieStore.get(Token);
-
-  if (!token) return NextResponse.redirect(new URL("/login", req.url));
-
-  const connect = await loginVerifyAPI(token.value);
-
-  if (connect.status !== 200) {
-    return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  if (connect.status === 200) {
-    const res = NextResponse.next();
-    res.cookies.set(Token, connect.body.accessToken);
+  if (!token) {
+    const loginUrl = new URL("/login", request.url);
+    return NextResponse.redirect(loginUrl);
   }
 
   return NextResponse.next();
 }
+
+export const config = {
+  matcher: [
+    /*
+     * Executa em rotas de página; não executa em arquivos estáticos (imagens, etc.),
+     * para que /logo-full-green.png e /side-login.png carreguem na tela de login.
+     */
+    "/((?!_next/static|_next/image|favicon.ico|api|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|woff2?|ttf|eot)$).*)",
+  ],
+};

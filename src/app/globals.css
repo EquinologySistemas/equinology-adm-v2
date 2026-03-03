@@ -1,33 +1,69 @@
 @import "tailwindcss";
 
-@theme {
-  /* Changing the default fontFamily to Poppins */
-  --font-sans: "Poppins", sans-serif;
-
-  /* --color-primary: #ed6842; */
-
-  /* --animate-accordion-up: accordion-up 0.2s ease-out;
-  --animate-accordion-down: accordion-down 0.2s ease-out;
-
-  @keyframes accordion-up {
-    from {
-      height: var(--radix-accordion-content-height);
-    }
-    to {
-      height: 0;
-    }
-  }
-
-  @keyframes accordion-down {
-    from {
-      height: 0;
-    }
-    to {
-      height: var(--radix-accordion-content-height);
-    }
-  } */
+:root {
+  --background: #ffffff;
+  --foreground: #27323f;
+  --primary: #fff;
+  --secondary: #154734;
+  --text: #27323f;
+  /* Dashboard / Admin */
+  --dash-bg: #f2f6f4;
+  --dash-card: #ffffff;
+  --dash-accent: #154734;
+  --dash-accent-soft: rgba(21, 71, 52, 0.08);
+  --dash-accent-muted: #1e5c47;
+  --dash-border: rgba(39, 50, 63, 0.08);
+  --dash-text: #1a242e;
+  --dash-text-muted: #5a6572;
+  /* Sidebar */
+  --sidebar-bg: #154734;
+  --sidebar-text: #ffffff;
+  --sidebar-hover: rgba(255, 255, 255, 0.1);
+  /* Feedback */
+  --success: #16a34a;
+  --error: #dc2626;
 }
 
-.swiper-slide {
-  max-width: fit-content;
+@theme inline {
+  --font-sans: var(--font-poppins), "Poppins", sans-serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-text: var(--text);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+.dash-page {
+  background: linear-gradient(
+    160deg,
+    var(--dash-bg) 0%,
+    #eef3f0 50%,
+    #f8faf9 100%
+  );
+  min-height: 100%;
+}
+
+.login-gradient {
+  background: linear-gradient(
+    135deg,
+    rgba(21, 71, 52, 0.12) 0%,
+    rgba(21, 71, 52, 0.06) 35%,
+    rgba(255, 255, 255, 0.9) 70%,
+    rgba(39, 50, 63, 0.04) 100%
+  );
+}
+
+.auth-decor-panel {
+  height: 100%;
+  max-height: 100dvh;
+}
+
+.auth-decor-placeholder {
+  background: linear-gradient(160deg, #e8f0ed 0%, #f0f5f2 50%, #fafbfa 100%);
 }
