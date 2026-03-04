@@ -5,10 +5,7 @@ import { AuthInput } from "@/components/auth/AuthInput";
 import { AuthLabel } from "@/components/auth/AuthLabel";
 import { AuthLayoutShell } from "@/components/auth/AuthLayoutShell";
 import { useApiContext } from "@/context/ApiContext";
-import {
-  getTokenCookieName,
-  getTokenCookieOptions,
-} from "@/lib/auth-cookies";
+import { getTokenCookieName, getTokenCookieOptions } from "@/lib/auth-cookies";
 import { Lock, Mail, User } from "lucide-react";
 import { useCookies } from "next-client-cookies";
 import { useRouter } from "next/navigation";
@@ -112,7 +109,7 @@ export default function LoginPage() {
             type="checkbox"
             checked={rememberMe}
             onChange={(e) => setRememberMe(e.target.checked)}
-            className="h-4 w-4 rounded accent-[#154734] border-[#27323F]/30 text-[#154734] focus:ring-[#154734]"
+            className="h-4 w-4 rounded border-[#27323F]/30 text-[#154734] accent-[#154734] focus:ring-[#154734]"
             aria-describedby="rememberMe-description"
           />
           <AuthLabel
