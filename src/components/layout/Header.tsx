@@ -4,16 +4,14 @@ import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { useCookies } from "next-client-cookies";
 import { SidebarTrigger } from "./Sidebar";
-
-const TOKEN_COOKIE =
-  process.env.NEXT_PUBLIC_USER_TOKEN || "equinology_admin_token";
+import { getTokenCookieName } from "@/lib/auth-cookies";
 
 export function Header() {
   const router = useRouter();
   const cookies = useCookies();
 
   function handleLogout() {
-    cookies.remove(TOKEN_COOKIE);
+    cookies.remove(getTokenCookieName());
     router.push("/login");
     router.refresh();
   }

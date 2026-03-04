@@ -1,17 +1,19 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Mail, Lock, User } from "lucide-react";
-import { useApiContext } from "@/context/ApiContext";
-import { useCookies } from "next-client-cookies";
-import { AuthLayoutShell } from "@/components/auth/AuthLayoutShell";
+import { AuthButton } from "@/components/auth/AuthButton";
 import { AuthInput } from "@/components/auth/AuthInput";
 import { AuthLabel } from "@/components/auth/AuthLabel";
-import { AuthButton } from "@/components/auth/AuthButton";
+import { AuthLayoutShell } from "@/components/auth/AuthLayoutShell";
+import { useApiContext } from "@/context/ApiContext";
+import {
+  getTokenCookieName,
+  getTokenCookieOptions,
+} from "@/lib/auth-cookies";
+import { Lock, Mail, User } from "lucide-react";
+import { useCookies } from "next-client-cookies";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
-const TOKEN_COOKIE =
-  process.env.NEXT_PUBLIC_USER_TOKEN || "equinology_admin_token";
 const AUTH_API = "/admin/auth/signin";
 
 export default function LoginPage() {
@@ -20,6 +22,7 @@ export default function LoginPage() {
   const { PostAPI } = useApiContext();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -34,7 +37,11 @@ export default function LoginPage() {
         false,
       );
       if (status === 200 && body?.accessToken) {
-        cookies.set(TOKEN_COOKIE, body.accessToken, { path: "/" });
+        cookies.set(
+          getTokenCookieName(),
+          body.accessToken,
+          getTokenCookieOptions(rememberMe),
+        );
         router.push("/");
         router.refresh();
       } else {
@@ -97,6 +104,24 @@ export default function LoginPage() {
             placeholder="••••••••"
             leftIcon={<Lock className="h-5 w-5" />}
           />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <input
+            id="rememberMe"
+            type="checkbox"
+            checked={rememberMe}
+            onChange={(e) => setRememberMe(e.target.checked)}
+            className="h-4 w-4 rounded accent-[#154734] border-[#27323F]/30 text-[#154734] focus:ring-[#154734]"
+            aria-describedby="rememberMe-description"
+          />
+          <AuthLabel
+            id="rememberMe-description"
+            htmlFor="rememberMe"
+            className="cursor-pointer font-normal text-[#27323F]/80"
+          >
+            Lembrar de mim
+          </AuthLabel>
         </div>
 
         {error && (

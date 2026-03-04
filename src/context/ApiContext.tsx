@@ -3,8 +3,11 @@
 import axios from "axios";
 import { useCookies } from "next-client-cookies";
 import { createContext, useContext } from "react";
+import { getTokenCookieName } from "@/lib/auth-cookies";
 
 const baseURL = process.env.NEXT_PUBLIC_API_URL;
+
+const LOGIN_PATH = "/login";
 
 interface ApiContextProps {
   PostAPI: (
@@ -35,12 +38,25 @@ interface ProviderProps {
 
 export const ApiContextProvider = ({ children }: ProviderProps) => {
   const cookies = useCookies();
-
-  const token = cookies.get(process.env.NEXT_PUBLIC_USER_TOKEN as string);
+  const tokenCookieName = getTokenCookieName();
+  const token = cookies.get(tokenCookieName);
 
   const api = axios.create({
     baseURL,
   });
+
+  api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      if (error.response?.status === 401) {
+        cookies.remove(tokenCookieName);
+        if (typeof window !== "undefined") {
+          window.location.href = LOGIN_PATH;
+        }
+      }
+      return Promise.reject(error);
+    },
+  );
 
   function config(auth: boolean) {
     return {

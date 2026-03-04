@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-
-const TOKEN_COOKIE =
-  process.env.NEXT_PUBLIC_USER_TOKEN || "equinology_admin_token";
+import { getTokenCookieName } from "@/lib/auth-cookies";
 
 export function middleware(request: NextRequest) {
-  const token = request.cookies.get(TOKEN_COOKIE)?.value;
+  const tokenCookieName = getTokenCookieName();
+  const token = request.cookies.get(tokenCookieName)?.value;
 
   if (request.nextUrl.pathname === "/login") {
     if (token) {
