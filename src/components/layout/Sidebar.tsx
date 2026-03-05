@@ -1,28 +1,26 @@
 "use client";
 
-import { useEffect } from "react";
+import { useSidebar } from "@/context/SidebarContext";
 import { cn } from "@/lib/utils";
 import {
   BarChart3,
   ChevronLeft,
   ChevronRight,
-  ClipboardList,
   CreditCard,
   DollarSign,
   FileText,
   LayoutDashboard,
   Megaphone,
   Menu,
-  Settings,
   Shield,
   Ticket,
   Users,
-  X,
+  X
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSidebar } from "@/context/SidebarContext";
+import { useEffect } from "react";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -32,9 +30,9 @@ const navItems = [
   { href: "/ads", label: "Anúncios", icon: Megaphone },
   { href: "/subscriptions", label: "Assinaturas", icon: FileText },
   { href: "/financial", label: "Financeiro", icon: DollarSign },
-  { href: "/audit-logs", label: "Auditoria", icon: ClipboardList },
+  // { href: "/audit-logs", label: "Auditoria", icon: ClipboardList },
   { href: "/reports", label: "Relatórios", icon: BarChart3 },
-  { href: "/settings", label: "Configurações", icon: Settings },
+  // { href: "/settings", label: "Configurações", icon: Settings },
   { href: "/admins", label: "Administradores", icon: Shield },
 ];
 
