@@ -1,23 +1,48 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
+import { Pagination } from "@/components/ui/Pagination";
 import { useApiContext } from "@/context/ApiContext";
-import { Modal } from "@/components/ui/Modal";
-import { Plus, Pencil, Trash2 } from "lucide-react";
-import toast from "react-hot-toast";
 import type { Plan } from "@/types/admin";
-import { PlansForm } from "./_components/PlansForm";
+import { Pencil, Plus, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import toast from "react-hot-toast";
+import { PlanCreateModal } from "./_components/PlanCreateModal";
+import { PlanDetailModal } from "./_components/PlanDetailModal";
 
 const API_PLANS = "/signature-plan";
 const API_PLANS_DELETE = "/admin/plans";
+const PAGE_SIZE = 20;
+
+function formatBRL(value: number | null | undefined): string {
+  if (value == null) return "—";
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
+}
 
 export default function PlansPage() {
-  const { GetAPI, PostAPI, PutAPI, DeleteAPI } = useApiContext();
+  const { GetAPI, DeleteAPI } = useApiContext();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
-  const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
+  const [detailPlan, setDetailPlan] = useState<Plan | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+
+  function normalizePlan(apiPlan: Record<string, unknown>): Plan {
+    return {
+      id: apiPlan.id as string,
+      name: (apiPlan.name as string) ?? "",
+      description: apiPlan.description as string | undefined,
+      priceCard: apiPlan.creditCardPrice as number | undefined,
+      pricePix: apiPlan.pixPrice as number | undefined,
+      active: apiPlan.isActive as boolean | undefined,
+      annualDiscountPercent: apiPlan.yearlyDiscount as number | undefined,
+      trialDays: apiPlan.trialDays as number | undefined,
+    };
+  }
 
   async function loadPlans() {
     setLoading(true);
@@ -27,7 +52,8 @@ export default function PlansPage() {
       const data = Array.isArray(res.body)
         ? res.body
         : (res.body?.plans ?? res.body?.data ?? []);
-      setPlans(Array.isArray(data) ? data : []);
+      const list = Array.isArray(data) ? data : [];
+      setPlans(list.map((p: Record<string, unknown>) => normalizePlan(p)));
     } else {
       toast.error("Erro ao carregar planos.");
     }
@@ -36,29 +62,6 @@ export default function PlansPage() {
   useEffect(() => {
     loadPlans();
   }, []);
-
-  async function handleCreate(data: Partial<Plan>) {
-    const res = await PostAPI(API_PLANS, data, true);
-    if (res.status === 200 || res.status === 201) {
-      toast.success("Plano criado com sucesso.");
-      setCreateOpen(false);
-      loadPlans();
-    } else {
-      toast.error(res.body?.message ?? "Erro ao criar plano.");
-    }
-  }
-
-  async function handleUpdate(data: Partial<Plan>) {
-    if (!editingPlan?.id) return;
-    const res = await PutAPI(`${API_PLANS}/${editingPlan.id}`, data, true);
-    if (res.status === 200) {
-      toast.success("Plano atualizado.");
-      setEditingPlan(null);
-      loadPlans();
-    } else {
-      toast.error(res.body?.message ?? "Erro ao atualizar plano.");
-    }
-  }
 
   async function handleDelete(id: string) {
     if (!confirm("Excluir este plano? Assinaturas ativas podem ser afetadas."))
@@ -73,6 +76,61 @@ export default function PlansPage() {
       toast.error(res.body?.message ?? "Erro ao excluir plano.");
     }
   }
+
+  const paginatedData = useMemo(
+    () => plans.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [plans, page],
+  );
+
+  const columns: ColumnDef<Plan>[] = useMemo(
+    () => [
+      {
+        key: "name",
+        label: "Nome",
+        sortable: true,
+        getValue: (p) => p.name ?? "",
+      },
+      {
+        key: "maxUsers",
+        label: "Usuários",
+        sortable: true,
+        getValue: (p) => p.maxUsers ?? 0,
+        render: (p) => p.maxUsers ?? "—",
+      },
+      {
+        key: "priceCard",
+        label: "Preço cartão",
+        sortable: true,
+        getValue: (p) => p.priceCard ?? 0,
+        render: (p) => formatBRL(p.priceCard),
+      },
+      {
+        key: "pricePix",
+        label: "Preço PIX",
+        sortable: true,
+        getValue: (p) => p.pricePix ?? 0,
+        render: (p) => formatBRL(p.pricePix),
+      },
+      {
+        key: "active",
+        label: "Ativo",
+        sortable: true,
+        getValue: (p) => (p.active !== false ? "sim" : "não"),
+        render: (p) => (
+          <span
+            className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+              p.active !== false
+                ? "bg-green-100 text-green-800"
+                : "bg-gray-100 text-gray-600"
+            }`}
+          >
+            {p.active !== false ? "Sim" : "Não"}
+          </span>
+        ),
+      },
+    ],
+    [],
+  );
 
   return (
     <div className="space-y-6">
@@ -95,132 +153,61 @@ export default function PlansPage() {
         </button>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-[var(--dash-border)] bg-white shadow-sm">
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--dash-accent)] border-t-transparent" />
-          </div>
-        ) : plans.length === 0 ? (
-          <div className="py-12 text-center text-sm text-[var(--dash-text-muted)]">
-            Nenhum plano cadastrado. Crie o primeiro plano.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-[var(--dash-border)] bg-[var(--dash-bg)]/60">
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
-                    Nome
-                  </th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
-                    Usuários
-                  </th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
-                    Preço cartão
-                  </th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
-                    Preço PIX
-                  </th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
-                    Ativo
-                  </th>
-                  <th className="px-4 py-3 text-right font-semibold text-[var(--dash-text)]">
-                    Ações
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {plans.map((plan) => (
-                  <tr
-                    key={plan.id}
-                    className="border-b border-[var(--dash-border)]/60 transition-colors hover:bg-[var(--dash-bg)]/40"
-                  >
-                    <td className="px-4 py-3 font-medium text-[var(--dash-text)]">
-                      {plan.name}
-                    </td>
-                    <td className="px-4 py-3 text-[var(--dash-text-muted)]">
-                      {plan.maxUsers ?? "—"}
-                    </td>
-                    <td className="px-4 py-3 text-[var(--dash-text-muted)]">
-                      {plan.priceCard != null
-                        ? new Intl.NumberFormat("pt-BR", {
-                            style: "currency",
-                            currency: "BRL",
-                          }).format(plan.priceCard)
-                        : "—"}
-                    </td>
-                    <td className="px-4 py-3 text-[var(--dash-text-muted)]">
-                      {plan.pricePix != null
-                        ? new Intl.NumberFormat("pt-BR", {
-                            style: "currency",
-                            currency: "BRL",
-                          }).format(plan.pricePix)
-                        : "—"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                          plan.active !== false
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-600"
-                        }`}
-                      >
-                        {plan.active !== false ? "Sim" : "Não"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setEditingPlan(plan)}
-                          className="rounded-lg p-2 text-[var(--dash-text-muted)] hover:bg-[var(--dash-accent-soft)] hover:text-[var(--dash-accent)]"
-                          aria-label="Editar"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(plan.id)}
-                          disabled={deletingId === plan.id}
-                          className="rounded-lg p-2 text-[var(--dash-text-muted)] hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
-                          aria-label="Excluir"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <DataTable<Plan>
+        data={paginatedData}
+        columns={columns}
+        keyExtractor={(p) => p.id}
+        loading={loading}
+        emptyMessage="Nenhum plano cadastrado. Crie o primeiro plano."
+        renderActions={(plan) => (
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setDetailPlan(plan)}
+              className="rounded-lg p-2 text-[var(--dash-text-muted)] hover:bg-[var(--dash-accent-soft)] hover:text-[var(--dash-accent)]"
+              aria-label="Editar"
+            >
+              <Pencil className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDelete(plan.id)}
+              disabled={deletingId === plan.id}
+              className="rounded-lg p-2 text-[var(--dash-text-muted)] hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+              aria-label="Excluir"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
           </div>
         )}
-      </div>
+      />
+      {!loading && plans.length > 0 && (
+        <Pagination
+          currentPage={page}
+          totalItems={plans.length}
+          pageSize={PAGE_SIZE}
+          onPageChange={setPage}
+        />
+      )}
 
-      <Modal
+      <PlanDetailModal
+        plan={detailPlan}
+        open={!!detailPlan}
+        onClose={() => setDetailPlan(null)}
+        onSaved={() => {
+          setDetailPlan(null);
+          loadPlans();
+        }}
+      />
+
+      <PlanCreateModal
         open={createOpen}
         onClose={() => setCreateOpen(false)}
-        title="Novo plano"
-      >
-        <PlansForm
-          onSubmit={handleCreate}
-          onCancel={() => setCreateOpen(false)}
-        />
-      </Modal>
-
-      <Modal
-        open={!!editingPlan}
-        onClose={() => setEditingPlan(null)}
-        title="Editar plano"
-      >
-        {editingPlan && (
-          <PlansForm
-            initialData={editingPlan}
-            onSubmit={handleUpdate}
-            onCancel={() => setEditingPlan(null)}
-          />
-        )}
-      </Modal>
+        onSaved={() => {
+          setCreateOpen(false);
+          loadPlans();
+        }}
+      />
     </div>
   );
 }

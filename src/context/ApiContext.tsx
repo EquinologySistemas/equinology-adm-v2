@@ -24,6 +24,11 @@ interface ApiContextProps {
     data: unknown,
     auth: boolean,
   ) => Promise<{ status: number; body: any }>;
+  PatchAPI: (
+    url: string,
+    data: unknown,
+    auth: boolean,
+  ) => Promise<{ status: number; body: any }>;
   DeleteAPI: (
     url: string,
     auth: boolean,
@@ -136,6 +141,29 @@ export const ApiContextProvider = ({ children }: ProviderProps) => {
       : connect;
   }
 
+  async function PatchAPI(url: string, data: unknown, auth: boolean) {
+    const connect = await api
+      .patch(url, data, config(auth))
+      .then(({ data }) => {
+        return {
+          status: 200,
+          body: data,
+        };
+      })
+      .catch((err) => {
+        const message = err.response.data;
+        const status = err.response.status;
+        return { status, body: message };
+      });
+
+    return connect.status === 500
+      ? {
+          status: connect.status,
+          body: "Ops! algo deu errado, tente novamente",
+        }
+      : connect;
+  }
+
   async function DeleteAPI(url: string, auth: boolean) {
     const connect = await api
       .delete(url, config(auth))
@@ -165,6 +193,7 @@ export const ApiContextProvider = ({ children }: ProviderProps) => {
         PostAPI,
         GetAPI,
         PutAPI,
+        PatchAPI,
         DeleteAPI,
       }}
     >

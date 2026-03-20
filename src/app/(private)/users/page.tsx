@@ -1,23 +1,46 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
+import { Pagination } from "@/components/ui/Pagination";
 import { useApiContext } from "@/context/ApiContext";
-import { MockIndicator } from "@/components/ui/MockIndicator";
 import { mockUsers } from "@/data/mock";
-import { Modal } from "@/components/ui/Modal";
-import { Search, User } from "lucide-react";
+import { formatPhone } from "@/lib/utils";
 import type { User as UserType } from "@/types/admin";
+import { Plus, Search, User } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { UserCreateModal } from "./_components/UserCreateModal";
+import { UserDetailModal } from "./_components/UserDetailModal";
 
 const API_USERS = "/admin/users";
+const PAGE_SIZE = 20;
+
+const ROLE_LABELS: Record<string, string> = {
+  ADMIN: "Administrador",
+  GESTOR: "Gestor",
+  COLABORADOR: "Colaborador",
+};
+
+function roleLabel(role: string | undefined): string {
+  return (role && ROLE_LABELS[role]) || role || "—";
+}
+
+function normalizeUser(u: Record<string, unknown>): UserType {
+  return {
+    ...u,
+    company: (u.company as string) ?? (u.companyName as string) ?? undefined,
+    companyId: u.companyId as string | undefined,
+    createdAt: u.createdAt as string | undefined,
+  } as UserType;
+}
 
 export default function UsersPage() {
   const { GetAPI } = useApiContext();
   const [users, setUsers] = useState<UserType[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isMockData, setIsMockData] = useState(false);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("");
   const [detailUser, setDetailUser] = useState<UserType | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [page, setPage] = useState(1);
 
   async function loadUsers() {
     setLoading(true);
@@ -29,12 +52,9 @@ export default function UsersPage() {
         res.body?.data ??
         (Array.isArray(res.body) ? res.body : []);
       const list = Array.isArray(data) ? data : [];
-      const useMock = list.length === 0;
-      setUsers(useMock ? mockUsers : list);
-      setIsMockData(useMock);
+      setUsers(list.map((u: Record<string, unknown>) => normalizeUser(u)));
     } else {
       setUsers(mockUsers);
-      setIsMockData(true);
     }
   }
 
@@ -43,36 +63,123 @@ export default function UsersPage() {
   }, []);
 
   const filtered = useMemo(() => {
-    let list = users;
-    if (search.trim()) {
-      const q = search.trim().toLowerCase();
-      list = list.filter(
-        (u) =>
-          u.name?.toLowerCase().includes(q) ||
-          u.email?.toLowerCase().includes(q) ||
-          u.company?.toLowerCase().includes(q),
-      );
-    }
-    if (statusFilter) {
-      list = list.filter((u) => (u.status ?? "active") === statusFilter);
-    }
-    return list;
-  }, [users, search, statusFilter]);
+    if (!search.trim()) return users;
+    const q = search.trim().toLowerCase();
+    return users.filter(
+      (u) =>
+        u.name?.toLowerCase().includes(q) ||
+        u.email?.toLowerCase().includes(q) ||
+        u.company?.toLowerCase().includes(q),
+    );
+  }, [users, search]);
+
+  const totalFiltered = filtered.length;
+  const paginatedData = useMemo(
+    () => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [filtered, page],
+  );
+
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
+
+  const columns: ColumnDef<UserType>[] = useMemo(
+    () => [
+      {
+        key: "name",
+        label: "Nome",
+        sortable: true,
+        getValue: (u) => u.name ?? "",
+      },
+      {
+        key: "email",
+        label: "E-mail",
+        sortable: true,
+        getValue: (u) => u.email ?? "",
+      },
+      {
+        key: "phone",
+        label: "Telefone",
+        sortable: true,
+        getValue: (u) => u.phone ?? "",
+        render: (u) => (u.phone ? formatPhone(u.phone) : "—"),
+      },
+      {
+        key: "company",
+        label: "Empresa",
+        sortable: true,
+        getValue: (u) => u.company ?? "",
+      },
+      {
+        key: "role",
+        label: "Função",
+        sortable: true,
+        getValue: (u) => roleLabel(u.role),
+      },
+      {
+        key: "planName",
+        label: "Plano",
+        sortable: true,
+        getValue: (u) => u.planName ?? "",
+      },
+      {
+        key: "status",
+        label: "Status",
+        sortable: true,
+        getValue: (u) =>
+          (u.status ?? "active") === "active" ? "active" : "blocked",
+        render: (u) => (
+          <span
+            className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+              (u.status ?? "active") === "active"
+                ? "bg-green-100 text-green-800"
+                : "bg-red-100 text-red-800"
+            }`}
+          >
+            {(u.status ?? "active") === "active" ? "Ativo" : "Bloqueado"}
+          </span>
+        ),
+      },
+      {
+        key: "createdAt",
+        label: "Cadastro",
+        sortable: true,
+        getValue: (u) => u.createdAt ?? "",
+        render: (u) =>
+          u.createdAt
+            ? new Date(u.createdAt).toLocaleDateString("pt-BR", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+              })
+            : "—",
+      },
+    ],
+    [],
+  );
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold text-[var(--dash-text)]">
-          Usuários
-        </h2>
-        <p className="mt-1 text-sm text-[var(--dash-text-muted)]">
-          Listagem e gestão de usuários do sistema
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-semibold text-[var(--dash-text)]">
+            Usuários
+          </h2>
+          <p className="mt-1 text-sm text-[var(--dash-text-muted)]">
+            Listagem e gestão de usuários do sistema
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setCreateOpen(true)}
+          className="inline-flex items-center gap-2 rounded-xl bg-[var(--dash-accent)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--dash-accent-muted)]"
+        >
+          <Plus className="h-4 w-4" />
+          Novo usuário
+        </button>
       </div>
 
-      {isMockData && <MockIndicator />}
-
-      <div className="flex flex-wrap items-center gap-4 rounded-xl border border-[var(--dash-border)] bg-white p-4 shadow-sm">
+      <div className="rounded-xl border border-[var(--dash-border)] bg-white p-4 shadow-sm">
         <div className="relative min-w-[200px] flex-1">
           <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--dash-text-muted)]" />
           <input
@@ -83,205 +190,53 @@ export default function UsersPage() {
             className="w-full rounded-xl border border-[var(--dash-border)] bg-white py-2.5 pr-4 pl-9 text-sm text-[var(--dash-text)] placeholder:text-[var(--dash-text-muted)] focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
           />
         </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-xl border border-[var(--dash-border)] bg-white px-4 py-2.5 text-sm text-[var(--dash-text)] focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
-        >
-          <option value="">Todos os status</option>
-          <option value="active">Ativo</option>
-          <option value="blocked">Bloqueado</option>
-        </select>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-[var(--dash-border)] bg-white shadow-sm">
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--dash-accent)] border-t-transparent" />
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="py-12 text-center text-sm text-[var(--dash-text-muted)]">
-            Nenhum usuário encontrado.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-[var(--dash-border)] bg-[var(--dash-bg)]/60">
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
-                    Nome
-                  </th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
-                    E-mail
-                  </th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
-                    Telefone
-                  </th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
-                    Empresa
-                  </th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
-                    Função
-                  </th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
-                    Plano
-                  </th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
-                    Status
-                  </th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
-                    Cadastro
-                  </th>
-                  <th className="px-4 py-3 text-right font-semibold text-[var(--dash-text)]">
-                    Ações
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((u) => (
-                  <tr
-                    key={u.id}
-                    className="border-b border-[var(--dash-border)]/60 transition-colors hover:bg-[var(--dash-bg)]/40"
-                  >
-                    <td className="px-4 py-3 font-medium text-[var(--dash-text)]">
-                      {u.name ?? "—"}
-                    </td>
-                    <td className="px-4 py-3 text-[var(--dash-text-muted)]">
-                      {u.email ?? "—"}
-                    </td>
-                    <td className="px-4 py-3 text-[var(--dash-text-muted)]">
-                      {u.phone ?? "—"}
-                    </td>
-                    <td className="px-4 py-3 text-[var(--dash-text-muted)]">
-                      {u.company ?? "—"}
-                    </td>
-                    <td className="px-4 py-3 text-[var(--dash-text-muted)]">
-                      {u.role ?? "—"}
-                    </td>
-                    <td className="px-4 py-3 text-[var(--dash-text-muted)]">
-                      {u.planName ?? "—"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                          (u.status ?? "active") === "active"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
-                      >
-                        {(u.status ?? "active") === "active"
-                          ? "Ativo"
-                          : "Bloqueado"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-[var(--dash-text-muted)]">
-                      {u.createdAt
-                        ? new Date(u.createdAt).toLocaleDateString("pt-BR")
-                        : "—"}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        type="button"
-                        onClick={() => setDetailUser(u)}
-                        className="inline-flex items-center gap-1 rounded-lg p-2 text-[var(--dash-text-muted)] hover:bg-[var(--dash-accent-soft)] hover:text-[var(--dash-accent)]"
-                        aria-label="Ver detalhes"
-                      >
-                        <User className="h-4 w-4" />
-                        Detalhes
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      <DataTable<UserType>
+        data={paginatedData}
+        columns={columns}
+        keyExtractor={(u) => u.id}
+        loading={loading}
+        emptyMessage="Nenhum usuário encontrado."
+        renderActions={(u) => (
+          <button
+            type="button"
+            onClick={() => setDetailUser(u)}
+            className="inline-flex items-center gap-1 rounded-lg p-2 text-[var(--dash-text-muted)] hover:bg-[var(--dash-accent-soft)] hover:text-[var(--dash-accent)]"
+            aria-label="Ver detalhes"
+          >
+            <User className="h-4 w-4" />
+            Detalhes
+          </button>
         )}
-      </div>
+      />
+      {!loading && totalFiltered > 0 && (
+        <Pagination
+          currentPage={page}
+          totalItems={totalFiltered}
+          pageSize={PAGE_SIZE}
+          onPageChange={setPage}
+        />
+      )}
 
-      <Modal
+      <UserDetailModal
+        user={detailUser}
         open={!!detailUser}
         onClose={() => setDetailUser(null)}
-        title="Detalhes do usuário"
-      >
-        {detailUser && (
-          <div className="space-y-4">
-            <dl className="grid gap-3 text-sm">
-              <div>
-                <dt className="font-medium text-[var(--dash-text-muted)]">
-                  Nome
-                </dt>
-                <dd className="text-[var(--dash-text)]">
-                  {detailUser.name ?? "—"}
-                </dd>
-              </div>
-              <div>
-                <dt className="font-medium text-[var(--dash-text-muted)]">
-                  E-mail
-                </dt>
-                <dd className="text-[var(--dash-text)]">
-                  {detailUser.email ?? "—"}
-                </dd>
-              </div>
-              <div>
-                <dt className="font-medium text-[var(--dash-text-muted)]">
-                  Telefone
-                </dt>
-                <dd className="text-[var(--dash-text)]">
-                  {detailUser.phone ?? "—"}
-                </dd>
-              </div>
-              <div>
-                <dt className="font-medium text-[var(--dash-text-muted)]">
-                  Empresa
-                </dt>
-                <dd className="text-[var(--dash-text)]">
-                  {detailUser.company ?? "—"}
-                </dd>
-              </div>
-              <div>
-                <dt className="font-medium text-[var(--dash-text-muted)]">
-                  Função
-                </dt>
-                <dd className="text-[var(--dash-text)]">
-                  {detailUser.role ?? "—"}
-                </dd>
-              </div>
-              <div>
-                <dt className="font-medium text-[var(--dash-text-muted)]">
-                  Plano
-                </dt>
-                <dd className="text-[var(--dash-text)]">
-                  {detailUser.planName ?? "—"}
-                </dd>
-              </div>
-              <div>
-                <dt className="font-medium text-[var(--dash-text-muted)]">
-                  Status
-                </dt>
-                <dd className="text-[var(--dash-text)]">
-                  {(detailUser.status ?? "active") === "active"
-                    ? "Ativo"
-                    : "Bloqueado"}
-                </dd>
-              </div>
-              <div>
-                <dt className="font-medium text-[var(--dash-text-muted)]">
-                  Data de cadastro
-                </dt>
-                <dd className="text-[var(--dash-text)]">
-                  {detailUser.createdAt
-                    ? new Date(detailUser.createdAt).toLocaleString("pt-BR")
-                    : "—"}
-                </dd>
-              </div>
-            </dl>
-            <p className="text-xs text-[var(--dash-text-muted)]">
-              Edição e bloqueio podem ser habilitados quando a API expuser os
-              endpoints correspondentes.
-            </p>
-          </div>
-        )}
-      </Modal>
+        onSaved={() => {
+          setDetailUser(null);
+          loadUsers();
+        }}
+      />
+
+      <UserCreateModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onSaved={() => {
+          setCreateOpen(false);
+          loadUsers();
+        }}
+      />
     </div>
   );
 }

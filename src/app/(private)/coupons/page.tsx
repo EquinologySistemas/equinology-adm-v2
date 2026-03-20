@@ -1,34 +1,48 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
+import { Pagination } from "@/components/ui/Pagination";
 import { useApiContext } from "@/context/ApiContext";
-import { Modal } from "@/components/ui/Modal";
-import { Plus, Pencil, Trash2 } from "lucide-react";
-import toast from "react-hot-toast";
+import {
+  couponFromApi,
+  formatCouponValidity,
+  formatCouponValue,
+} from "@/lib/coupons-api";
 import type { Coupon } from "@/types/admin";
-import { CouponsForm } from "./_components/CouponsForm";
+import { Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import toast from "react-hot-toast";
+import { CouponCreateModal } from "./_components/CouponCreateModal";
+import { CouponEditModal } from "./_components/CouponEditModal";
 
 const API_COUPONS = "/admin/coupons";
+const PAGE_SIZE = 20;
 
 export default function CouponsPage() {
-  const { GetAPI, PostAPI, PutAPI, DeleteAPI } = useApiContext();
+  const { GetAPI, DeleteAPI } = useApiContext();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   async function loadCoupons() {
     setLoading(true);
     const res = await GetAPI(API_COUPONS, true);
     setLoading(false);
     if (res.status === 200) {
-      const data = Array.isArray(res.body)
+      const raw = Array.isArray(res.body)
         ? res.body
         : (res.body?.coupons ?? res.body?.data ?? []);
-      setCoupons(Array.isArray(data) ? data : []);
+      const list = Array.isArray(raw) ? raw : [];
+      setCoupons(
+        list.map((row: Record<string, unknown>) => couponFromApi(row)),
+      );
     } else {
       toast.error("Erro ao carregar cupons.");
+      setCoupons([]);
     }
   }
 
@@ -36,28 +50,21 @@ export default function CouponsPage() {
     loadCoupons();
   }, []);
 
-  async function handleCreate(data: Partial<Coupon>) {
-    const res = await PostAPI(API_COUPONS, data, true);
-    if (res.status === 200 || res.status === 201) {
-      toast.success("Cupom criado com sucesso.");
-      setCreateOpen(false);
-      loadCoupons();
-    } else {
-      toast.error(res.body?.message ?? "Erro ao criar cupom.");
-    }
-  }
+  const filtered = useMemo(() => {
+    if (!search.trim()) return coupons;
+    const q = search.trim().toLowerCase();
+    return coupons.filter((c) => c.code?.toLowerCase().includes(q));
+  }, [coupons, search]);
 
-  async function handleUpdate(data: Partial<Coupon>) {
-    if (!editingCoupon?.id) return;
-    const res = await PutAPI(`${API_COUPONS}/${editingCoupon.id}`, data, true);
-    if (res.status === 200) {
-      toast.success("Cupom atualizado.");
-      setEditingCoupon(null);
-      loadCoupons();
-    } else {
-      toast.error(res.body?.message ?? "Erro ao atualizar cupom.");
-    }
-  }
+  const totalFiltered = filtered.length;
+  const paginatedData = useMemo(
+    () => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [filtered, page],
+  );
+
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
 
   async function handleDelete(id: string) {
     if (!confirm("Excluir este cupom?")) return;
@@ -68,17 +75,77 @@ export default function CouponsPage() {
       toast.success("Cupom excluído.");
       loadCoupons();
     } else {
-      toast.error(res.body?.message ?? "Erro ao excluir cupom.");
+      toast.error(
+        typeof res.body === "string"
+          ? res.body
+          : ((res.body as { message?: string })?.message ??
+              "Erro ao excluir cupom."),
+      );
     }
   }
 
-  function formatValue(c: Coupon) {
-    if (c.type === "percent") return `${c.value}%`;
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(c.value);
-  }
+  const columns: ColumnDef<Coupon>[] = useMemo(
+    () => [
+      {
+        key: "code",
+        label: "Código",
+        sortable: true,
+        getValue: (c) => c.code ?? "",
+        render: (c) => (
+          <span className="font-medium text-[var(--dash-text)] uppercase">
+            {c.code}
+          </span>
+        ),
+      },
+      {
+        key: "discountType",
+        label: "Tipo",
+        sortable: true,
+        getValue: (c) => (c.discountType === "FIXED" ? "Fixo" : "Percentual"),
+      },
+      {
+        key: "value",
+        label: "Valor",
+        sortable: true,
+        getValue: (c) => formatCouponValue(c),
+      },
+      {
+        key: "usages",
+        label: "Usos",
+        sortable: true,
+        getValue: (c) => {
+          const max = c.maxUsages;
+          const cur = c.currentUsages ?? 0;
+          if (max == null) return `${cur} / ∞`;
+          return `${cur} / ${max}`;
+        },
+      },
+      {
+        key: "validity",
+        label: "Validade",
+        sortable: true,
+        getValue: (c) => formatCouponValidity(c),
+      },
+      {
+        key: "isActive",
+        label: "Ativo",
+        sortable: true,
+        getValue: (c) => (c.isActive ? "Sim" : "Não"),
+        render: (c) => (
+          <span
+            className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+              c.isActive
+                ? "bg-green-100 text-green-800"
+                : "bg-gray-100 text-gray-600"
+            }`}
+          >
+            {c.isActive ? "Sim" : "Não"}
+          </span>
+        ),
+      },
+    ],
+    [],
+  );
 
   return (
     <div className="space-y-6">
@@ -94,137 +161,84 @@ export default function CouponsPage() {
         <button
           type="button"
           onClick={() => setCreateOpen(true)}
-          className="flex items-center gap-2 rounded-xl bg-[var(--dash-accent)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--dash-accent-muted)]"
+          className="inline-flex items-center gap-2 rounded-xl bg-[var(--dash-accent)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--dash-accent-muted)]"
         >
           <Plus className="h-4 w-4" />
           Novo cupom
         </button>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-[var(--dash-border)] bg-white shadow-sm">
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--dash-accent)] border-t-transparent" />
-          </div>
-        ) : coupons.length === 0 ? (
-          <div className="py-12 text-center text-sm text-[var(--dash-text-muted)]">
-            Nenhum cupom cadastrado.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-[var(--dash-border)] bg-[var(--dash-bg)]/60">
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
-                    Código
-                  </th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
-                    Tipo
-                  </th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
-                    Valor
-                  </th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
-                    Usos
-                  </th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
-                    Validade
-                  </th>
-                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
-                    Ativo
-                  </th>
-                  <th className="px-4 py-3 text-right font-semibold text-[var(--dash-text)]">
-                    Ações
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {coupons.map((c) => (
-                  <tr
-                    key={c.id}
-                    className="border-b border-[var(--dash-border)]/60 transition-colors hover:bg-[var(--dash-bg)]/40"
-                  >
-                    <td className="px-4 py-3 font-medium text-[var(--dash-text)] uppercase">
-                      {c.code}
-                    </td>
-                    <td className="px-4 py-3 text-[var(--dash-text-muted)]">
-                      {c.type === "percent" ? "Percentual" : "Fixo"}
-                    </td>
-                    <td className="px-4 py-3 text-[var(--dash-text-muted)]">
-                      {formatValue(c)}
-                    </td>
-                    <td className="px-4 py-3 text-[var(--dash-text-muted)]">
-                      {c.currentUses ?? 0} / {c.maxUses ?? "—"}
-                    </td>
-                    <td className="px-4 py-3 text-[var(--dash-text-muted)]">
-                      {c.validUntil
-                        ? new Date(c.validUntil).toLocaleDateString("pt-BR")
-                        : "—"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                          c.active !== false
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-600"
-                        }`}
-                      >
-                        {c.active !== false ? "Sim" : "Não"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setEditingCoupon(c)}
-                          className="rounded-lg p-2 text-[var(--dash-text-muted)] hover:bg-[var(--dash-accent-soft)] hover:text-[var(--dash-accent)]"
-                          aria-label="Editar"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(c.id)}
-                          disabled={deletingId === c.id}
-                          className="rounded-lg p-2 text-[var(--dash-text-muted)] hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
-                          aria-label="Excluir"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+      <div className="rounded-xl border border-[var(--dash-border)] bg-white p-4 shadow-sm">
+        <div className="relative min-w-[200px] flex-1">
+          <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--dash-text-muted)]" />
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar por código..."
+            className="w-full rounded-xl border border-[var(--dash-border)] bg-white py-2.5 pr-4 pl-9 text-sm text-[var(--dash-text)] placeholder:text-[var(--dash-text-muted)] focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
+          />
+        </div>
       </div>
 
-      <Modal
+      <DataTable<Coupon>
+        data={paginatedData}
+        columns={columns}
+        keyExtractor={(c) => c.id}
+        loading={loading}
+        emptyMessage="Nenhum cupom encontrado."
+        renderActions={(c) => (
+          <div className="flex flex-wrap items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setEditingCoupon(c)}
+              className="inline-flex items-center gap-1 rounded-lg p-2 text-[var(--dash-text-muted)] hover:bg-[var(--dash-accent-soft)] hover:text-[var(--dash-accent)]"
+              aria-label="Editar"
+            >
+              <Pencil className="h-4 w-4" />
+              Editar
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDelete(c.id)}
+              disabled={deletingId === c.id}
+              className="inline-flex items-center gap-1 rounded-lg p-2 text-[var(--dash-text-muted)] hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+              aria-label="Excluir"
+            >
+              <Trash2 className="h-4 w-4" />
+              Excluir
+            </button>
+          </div>
+        )}
+      />
+
+      {!loading && totalFiltered > 0 && (
+        <Pagination
+          currentPage={page}
+          totalItems={totalFiltered}
+          pageSize={PAGE_SIZE}
+          onPageChange={setPage}
+        />
+      )}
+
+      <CouponCreateModal
         open={createOpen}
         onClose={() => setCreateOpen(false)}
-        title="Novo cupom"
-      >
-        <CouponsForm
-          onSubmit={handleCreate}
-          onCancel={() => setCreateOpen(false)}
-        />
-      </Modal>
+        onSaved={() => {
+          setCreateOpen(false);
+          loadCoupons();
+        }}
+      />
 
-      <Modal
+      <CouponEditModal
+        coupon={editingCoupon}
         open={!!editingCoupon}
         onClose={() => setEditingCoupon(null)}
-        title="Editar cupom"
-      >
-        {editingCoupon && (
-          <CouponsForm
-            initialData={editingCoupon}
-            onSubmit={handleUpdate}
-            onCancel={() => setEditingCoupon(null)}
-          />
-        )}
-      </Modal>
+        onSaved={() => {
+          setEditingCoupon(null);
+          loadCoupons();
+        }}
+      />
     </div>
   );
 }

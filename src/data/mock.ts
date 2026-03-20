@@ -1,4 +1,4 @@
-import type { Subscription, Transaction, User } from "@/types/admin";
+import type { Transaction, User } from "@/types/admin";
 
 export interface AuditLogMock {
   id: string;
@@ -19,58 +19,6 @@ export interface AdminUserMock {
   active?: boolean;
   createdAt?: string;
 }
-
-export const mockSubscriptions: Subscription[] = [
-  {
-    id: "sub-1",
-    userId: "u1",
-    userName: "Maria Silva",
-    userEmail: "maria.silva@haras.com.br",
-    planId: "p1",
-    planName: "Profissional",
-    status: "active",
-    currentPeriodStart: "2025-02-01",
-    currentPeriodEnd: "2025-03-01",
-    createdAt: "2024-06-15T10:00:00Z",
-  },
-  {
-    id: "sub-2",
-    userId: "u2",
-    userName: "João Santos",
-    userEmail: "joao@equiclinic.com",
-    planId: "p2",
-    planName: "Empresarial",
-    status: "active",
-    currentPeriodStart: "2025-02-10",
-    currentPeriodEnd: "2025-03-10",
-    createdAt: "2024-08-20T14:30:00Z",
-  },
-  {
-    id: "sub-3",
-    userId: "u3",
-    userName: "Ana Oliveira",
-    userEmail: "ana.oliveira@vetequus.com",
-    planId: "p1",
-    planName: "Profissional",
-    status: "trial",
-    currentPeriodStart: "2025-02-25",
-    currentPeriodEnd: "2025-03-25",
-    createdAt: "2025-02-25T09:00:00Z",
-  },
-  {
-    id: "sub-4",
-    userId: "u4",
-    userName: "Carlos Mendes",
-    userEmail: "carlos@haras.com.br",
-    planId: "p2",
-    planName: "Empresarial",
-    status: "cancelled",
-    currentPeriodStart: "2025-01-01",
-    currentPeriodEnd: "2025-02-01",
-    cancelledAt: "2025-02-15T12:00:00Z",
-    createdAt: "2024-11-01T08:00:00Z",
-  },
-];
 
 export const mockTransactions: Transaction[] = [
   {

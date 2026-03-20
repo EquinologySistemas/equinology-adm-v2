@@ -3,81 +3,74 @@
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { Pagination } from "@/components/ui/Pagination";
 import { useApiContext } from "@/context/ApiContext";
-import { MockIndicator } from "@/components/ui/MockIndicator";
-import { mockAdmins } from "@/data/mock";
-import type { Admin } from "@/types/admin";
-import { Plus, Search, Shield } from "lucide-react";
+import { formatCEP, formatCNPJ } from "@/lib/utils";
+import type { Company as CompanyType } from "@/types/admin";
+import { Building2, Plus, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { AdminCreateModal } from "./_components/AdminCreateModal";
-import { AdminDetailModal } from "./_components/AdminDetailModal";
+import { CompanyCreateModal } from "./_components/CompanyCreateModal";
+import { CompanyDetailModal } from "./_components/CompanyDetailModal";
 
-const API_ADMINS = "/admin/admins";
+const API_COMPANIES = "/admin/companies";
 const PAGE_SIZE = 20;
 
-const ROLE_LABELS: Record<string, string> = {
-  super_admin: "Super Admin",
-  support: "Suporte",
-};
-
-function roleLabel(role: string | undefined): string {
-  return (role && ROLE_LABELS[role]) || role || "—";
-}
-
-function normalizeAdmin(a: Record<string, unknown>): Admin {
+function normalizeCompany(c: Record<string, unknown>): CompanyType {
   return {
-    ...a,
-    id: a.id as string,
-    email: a.email as string,
-    name: (a.name as string) ?? undefined,
-    role: (a.role as string) ?? undefined,
-    active: a.active !== undefined ? (a.active as boolean) : true,
-    createdAt: (a.createdAt as string) ?? undefined,
-  } as Admin;
+    id: (c.id as string) ?? "",
+    name: (c.name as string) ?? "",
+    code: c.code as string | undefined,
+    cnpj: c.cnpj as string | null | undefined,
+    address: c.address as string | undefined,
+    number: c.number as string | undefined,
+    postalCode: c.postalCode as string | undefined,
+    walletId: c.walletId as string | null | undefined,
+    paymentId: c.paymentId as string | undefined,
+    paymentType: c.paymentType as string | undefined,
+    paymentResponsibleId: c.paymentResponsibleId as string | null | undefined,
+    createdAt: c.createdAt as string | undefined,
+    updatedAt: c.updatedAt as string | undefined,
+  };
 }
 
-export default function AdminsPage() {
+export default function CompaniesPage() {
   const { GetAPI } = useApiContext();
-  const [admins, setAdmins] = useState<Admin[]>([]);
+  const [companies, setCompanies] = useState<CompanyType[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isMockData, setIsMockData] = useState(false);
   const [search, setSearch] = useState("");
-  const [detailAdmin, setDetailAdmin] = useState<Admin | null>(null);
+  const [detailCompany, setDetailCompany] = useState<CompanyType | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [page, setPage] = useState(1);
 
-  async function loadAdmins() {
+  async function loadCompanies() {
     setLoading(true);
-    const res = await GetAPI(API_ADMINS, true);
+    const res = await GetAPI(API_COMPANIES, true);
     setLoading(false);
     if (res.status === 200) {
       const data =
-        res.body?.admins ??
-        res.body?.data ??
-        (Array.isArray(res.body) ? res.body : []);
+        res.body?.companies ?? (Array.isArray(res.body) ? res.body : []);
       const list = Array.isArray(data) ? data : [];
-      const useMock = list.length === 0;
-      setAdmins(list.map((a: Record<string, unknown>) => normalizeAdmin(a)));
-      setIsMockData(useMock);
+      setCompanies(
+        list.map((c: Record<string, unknown>) => normalizeCompany(c)),
+      );
     } else {
-      setAdmins(mockAdmins.map((a) => normalizeAdmin(a)));
-      setIsMockData(true);
+      setCompanies([]);
     }
   }
 
   useEffect(() => {
-    loadAdmins();
+    loadCompanies();
   }, []);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return admins;
+    if (!search.trim()) return companies;
     const q = search.trim().toLowerCase();
-    return admins.filter(
-      (a) =>
-        a.name?.toLowerCase().includes(q) ||
-        a.email?.toLowerCase().includes(q) ||
-        roleLabel(a.role).toLowerCase().includes(q),
+    return companies.filter(
+      (c) =>
+        c.name?.toLowerCase().includes(q) ||
+        (c.cnpj && formatCNPJ(c.cnpj).toLowerCase().includes(q)) ||
+        (c.cnpj && c.cnpj.replace(/\D/g, "").includes(q)) ||
+        c.address?.toLowerCase().includes(q),
     );
-  }, [admins, search]);
+  }, [companies, search]);
 
   const totalFiltered = filtered.length;
   const paginatedData = useMemo(
@@ -89,51 +82,48 @@ export default function AdminsPage() {
     setPage(1);
   }, [search]);
 
-  const columns: ColumnDef<Admin>[] = useMemo(
+  const columns: ColumnDef<CompanyType>[] = useMemo(
     () => [
       {
         key: "name",
         label: "Nome",
         sortable: true,
-        getValue: (a) => a.name ?? "",
+        getValue: (c) => c.name ?? "",
       },
       {
-        key: "email",
-        label: "E-mail",
+        key: "cnpj",
+        label: "CNPJ",
         sortable: true,
-        getValue: (a) => a.email ?? "",
+        getValue: (c) => c.cnpj ?? "",
+        render: (c) => (c.cnpj ? formatCNPJ(c.cnpj) : "—"),
       },
       {
-        key: "role",
-        label: "Função",
+        key: "address",
+        label: "Endereço",
         sortable: true,
-        getValue: (a) => roleLabel(a.role),
+        getValue: (c) => c.address ?? "",
       },
       {
-        key: "active",
-        label: "Status",
+        key: "number",
+        label: "Número",
         sortable: true,
-        getValue: (a) => (a.active !== false ? "active" : "inactive"),
-        render: (a) => (
-          <span
-            className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-              a.active !== false
-                ? "bg-green-100 text-green-800"
-                : "bg-gray-100 text-gray-600"
-            }`}
-          >
-            {a.active !== false ? "Ativo" : "Inativo"}
-          </span>
-        ),
+        getValue: (c) => c.number ?? "",
+      },
+      {
+        key: "postalCode",
+        label: "CEP",
+        sortable: true,
+        getValue: (c) => c.postalCode ?? "",
+        render: (c) => (c.postalCode ? formatCEP(c.postalCode) : "—"),
       },
       {
         key: "createdAt",
         label: "Cadastro",
         sortable: true,
-        getValue: (a) => a.createdAt ?? "",
-        render: (a) =>
-          a.createdAt
-            ? new Date(a.createdAt).toLocaleDateString("pt-BR", {
+        getValue: (c) => c.createdAt ?? "",
+        render: (c) =>
+          c.createdAt
+            ? new Date(c.createdAt).toLocaleDateString("pt-BR", {
                 day: "2-digit",
                 month: "2-digit",
                 year: "numeric",
@@ -149,10 +139,10 @@ export default function AdminsPage() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold text-[var(--dash-text)]">
-            Administradores
+            Empresas
           </h2>
           <p className="mt-1 text-sm text-[var(--dash-text-muted)]">
-            Listagem e gestão de contas administrativas
+            Listagem e gestão de empresas do sistema
           </p>
         </div>
         <button
@@ -161,11 +151,9 @@ export default function AdminsPage() {
           className="inline-flex items-center gap-2 rounded-xl bg-[var(--dash-accent)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--dash-accent-muted)]"
         >
           <Plus className="h-4 w-4" />
-          Novo administrador
+          Nova empresa
         </button>
       </div>
-
-      {isMockData && <MockIndicator />}
 
       <div className="rounded-xl border border-[var(--dash-border)] bg-white p-4 shadow-sm">
         <div className="relative min-w-[200px] flex-1">
@@ -174,26 +162,26 @@ export default function AdminsPage() {
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nome, e-mail ou função..."
+            placeholder="Buscar por nome, CNPJ ou endereço..."
             className="w-full rounded-xl border border-[var(--dash-border)] bg-white py-2.5 pr-4 pl-9 text-sm text-[var(--dash-text)] placeholder:text-[var(--dash-text-muted)] focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
           />
         </div>
       </div>
 
-      <DataTable<Admin>
+      <DataTable<CompanyType>
         data={paginatedData}
         columns={columns}
-        keyExtractor={(a) => a.id}
+        keyExtractor={(c) => c.id}
         loading={loading}
-        emptyMessage="Nenhum administrador encontrado."
-        renderActions={(a) => (
+        emptyMessage="Nenhuma empresa encontrada."
+        renderActions={(c) => (
           <button
             type="button"
-            onClick={() => setDetailAdmin(a)}
+            onClick={() => setDetailCompany(c)}
             className="inline-flex items-center gap-1 rounded-lg p-2 text-[var(--dash-text-muted)] hover:bg-[var(--dash-accent-soft)] hover:text-[var(--dash-accent)]"
             aria-label="Ver detalhes"
           >
-            <Shield className="h-4 w-4" />
+            <Building2 className="h-4 w-4" />
             Detalhes
           </button>
         )}
@@ -207,22 +195,22 @@ export default function AdminsPage() {
         />
       )}
 
-      <AdminDetailModal
-        admin={detailAdmin}
-        open={!!detailAdmin}
-        onClose={() => setDetailAdmin(null)}
+      <CompanyDetailModal
+        company={detailCompany}
+        open={!!detailCompany}
+        onClose={() => setDetailCompany(null)}
         onSaved={() => {
-          setDetailAdmin(null);
-          loadAdmins();
+          setDetailCompany(null);
+          loadCompanies();
         }}
       />
 
-      <AdminCreateModal
+      <CompanyCreateModal
         open={createOpen}
         onClose={() => setCreateOpen(false)}
         onSaved={() => {
           setCreateOpen(false);
-          loadAdmins();
+          loadCompanies();
         }}
       />
     </div>

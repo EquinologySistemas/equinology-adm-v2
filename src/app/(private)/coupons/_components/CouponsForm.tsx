@@ -1,72 +1,138 @@
 "use client";
 
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import {
+  couponFormToPayload,
+  type CouponWritePayload,
+} from "@/lib/coupons-api";
 import type { Coupon } from "@/types/admin";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Controller, useForm } from "react-hook-form";
+import { z } from "zod";
 
 const couponSchema = z
   .object({
     code: z.string().min(1, "Código é obrigatório"),
-    type: z.enum(["percent", "fixed"]),
-    value: z.coerce.number().min(0, "Valor deve ser positivo"),
+    discountType: z.enum(["PERCENT", "FIXED"]),
+    value: z.coerce.number(),
     validFrom: z.string().optional(),
     validUntil: z.string().optional(),
-    maxUses: z.coerce.number().int().min(0).optional(),
-    maxUsesPerUser: z.coerce.number().int().min(0).optional(),
-    active: z.boolean().optional(),
+    maxUsagesInput: z.string().optional(),
+    isActive: z.boolean(),
   })
-  .refine(
-    (data) => {
-      if (!data.validFrom || !data.validUntil) return true;
-      return new Date(data.validUntil) >= new Date(data.validFrom);
-    },
-    { message: "Validade final deve ser após a inicial", path: ["validUntil"] },
-  );
+  .superRefine((data, ctx) => {
+    const hasFrom = Boolean(data.validFrom?.trim());
+    const hasUntil = Boolean(data.validUntil?.trim());
+    if (hasFrom !== hasUntil) {
+      ctx.addIssue({
+        code: "custom",
+        message:
+          "Informe data inicial e final, ou deixe as duas em branco para validade indefinida.",
+        path: ["validUntil"],
+      });
+    }
+    if (hasFrom && hasUntil) {
+      const a = new Date(data.validFrom!);
+      const b = new Date(data.validUntil!);
+      if (b < a) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Validade final deve ser igual ou posterior à inicial.",
+          path: ["validUntil"],
+        });
+      }
+    }
+    if (data.discountType === "PERCENT") {
+      if (data.value <= 0 || data.value > 100) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Informe um percentual entre 1 e 100.",
+          path: ["value"],
+        });
+      }
+    } else if (data.value <= 0) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Informe um valor fixo maior que zero.",
+        path: ["value"],
+      });
+    }
+  });
 
-type CouponFormData = z.infer<typeof couponSchema>;
+export type CouponFormValues = z.infer<typeof couponSchema>;
+
+function defaultValuesFromCoupon(c?: Coupon | null): CouponFormValues {
+  if (!c) {
+    return {
+      code: "",
+      discountType: "PERCENT",
+      value: 0,
+      validFrom: "",
+      validUntil: "",
+      maxUsagesInput: "",
+      isActive: true,
+    };
+  }
+  const value =
+    c.discountType === "FIXED"
+      ? (c.discountFixedAmount ?? 0)
+      : c.discountPercentage;
+  return {
+    code: c.code ?? "",
+    discountType: c.discountType,
+    value,
+    validFrom: c.validFrom ? c.validFrom.slice(0, 10) : "",
+    validUntil: c.validUntil ? c.validUntil.slice(0, 10) : "",
+    maxUsagesInput:
+      c.maxUsages != null && c.maxUsages >= 1 ? String(c.maxUsages) : "",
+    isActive: c.isActive !== false,
+  };
+}
 
 interface CouponsFormProps {
-  initialData?: Coupon;
-  onSubmit: (data: Partial<Coupon>) => void | Promise<void>;
+  initialCoupon?: Coupon | null;
+  submitLabel?: string;
+  onSubmit: (payload: CouponWritePayload) => void | Promise<void>;
   onCancel: () => void;
 }
 
 export function CouponsForm({
-  initialData,
+  initialCoupon,
+  submitLabel = "Salvar",
   onSubmit,
   onCancel,
 }: CouponsFormProps) {
   const {
     register,
+    control,
     handleSubmit,
     watch,
     formState: { errors, isSubmitting },
-  } = useForm<CouponFormData>({
+  } = useForm<CouponFormValues>({
     resolver: zodResolver(couponSchema),
-    defaultValues: {
-      code: initialData?.code ?? "",
-      type: initialData?.type ?? "percent",
-      value: initialData?.value ?? 0,
-      validFrom: initialData?.validFrom
-        ? initialData.validFrom.slice(0, 10)
-        : "",
-      validUntil: initialData?.validUntil
-        ? initialData.validUntil.slice(0, 10)
-        : "",
-      maxUses: initialData?.maxUses ?? undefined,
-      maxUsesPerUser: initialData?.maxUsesPerUser ?? undefined,
-      active: initialData?.active !== false,
-    },
+    defaultValues: defaultValuesFromCoupon(initialCoupon),
   });
 
-  const type = watch("type");
+  const discountType = watch("discountType");
+
+  async function onValid(data: CouponFormValues) {
+    const payload = couponFormToPayload({
+      code: data.code,
+      discountType: data.discountType,
+      value: data.value,
+      validFrom: data.validFrom ?? "",
+      validUntil: data.validUntil ?? "",
+      maxUsagesInput: data.maxUsagesInput ?? "",
+      isActive: data.isActive,
+    });
+    await onSubmit(payload);
+  }
 
   return (
-    <form
-      onSubmit={handleSubmit((data) => onSubmit(data))}
-      className="space-y-4"
-    >
+    <form onSubmit={handleSubmit(onValid)} className="space-y-4">
+      <p className="text-xs text-[var(--dash-text-muted)]">
+        Deixe as datas em branco para validade indefinida. Deixe &quot;Uso
+        máximo&quot; vazio para uso ilimitado.
+      </p>
       <div>
         <label className="mb-1 block text-sm font-medium text-[var(--dash-text)]">
           Código *
@@ -86,20 +152,20 @@ export function CouponsForm({
             Tipo
           </label>
           <select
-            {...register("type")}
+            {...register("discountType")}
             className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
           >
-            <option value="percent">Percentual</option>
-            <option value="fixed">Valor fixo</option>
+            <option value="PERCENT">Percentual</option>
+            <option value="FIXED">Valor fixo</option>
           </select>
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium text-[var(--dash-text)]">
-            {type === "percent" ? "Percentual (%)" : "Valor (R$)"} *
+            {discountType === "PERCENT" ? "Percentual (%)" : "Valor (R$)"} *
           </label>
           <input
             type="number"
-            step={type === "percent" ? 1 : 0.01}
+            step={discountType === "PERCENT" ? 1 : 0.01}
             {...register("value")}
             min={0}
             className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
@@ -136,38 +202,36 @@ export function CouponsForm({
           )}
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-[var(--dash-text)]">
-            Uso máximo (cupom)
-          </label>
-          <input
-            type="number"
-            {...register("maxUses")}
-            min={0}
-            className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-[var(--dash-text)]">
-            Uso máx. por usuário
-          </label>
-          <input
-            type="number"
-            {...register("maxUsesPerUser")}
-            min={0}
-            className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
-          />
-        </div>
+      <div>
+        <label className="mb-1 block text-sm font-medium text-[var(--dash-text)]">
+          Uso máximo (cupom)
+        </label>
+        <input
+          type="text"
+          inputMode="numeric"
+          {...register("maxUsagesInput")}
+          placeholder="Ilimitado se vazio"
+          className="w-full rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
+        />
       </div>
       <div className="flex items-center gap-2">
-        <input
-          type="checkbox"
-          id="active"
-          {...register("active")}
-          className="h-4 w-4 rounded border-[var(--dash-border)] text-[var(--dash-accent)] focus:ring-[var(--dash-accent)]"
+        <Controller
+          name="isActive"
+          control={control}
+          render={({ field: { value, onChange } }) => (
+            <input
+              type="checkbox"
+              id="coupon-active"
+              checked={value}
+              onChange={(e) => onChange(e.target.checked)}
+              className="h-4 w-4 rounded border-[var(--dash-border)] text-[var(--dash-accent)] focus:ring-[var(--dash-accent)]"
+            />
+          )}
         />
-        <label htmlFor="active" className="text-sm text-[var(--dash-text)]">
+        <label
+          htmlFor="coupon-active"
+          className="text-sm text-[var(--dash-text)]"
+        >
           Cupom ativo
         </label>
       </div>
@@ -184,7 +248,7 @@ export function CouponsForm({
           disabled={isSubmitting}
           className="rounded-xl bg-[var(--dash-accent)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--dash-accent-muted)] disabled:opacity-60"
         >
-          {isSubmitting ? "Salvando…" : "Salvar"}
+          {isSubmitting ? "Salvando…" : submitLabel}
         </button>
       </div>
     </form>

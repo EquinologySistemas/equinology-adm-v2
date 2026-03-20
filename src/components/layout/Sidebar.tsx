@@ -3,7 +3,7 @@
 import { useSidebar } from "@/context/SidebarContext";
 import { cn } from "@/lib/utils";
 import {
-  BarChart3,
+  Building2,
   ChevronLeft,
   ChevronRight,
   CreditCard,
@@ -25,14 +25,12 @@ import { useEffect } from "react";
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/users", label: "Usuários", icon: Users },
+  { href: "/companies", label: "Empresas", icon: Building2 },
   { href: "/plans", label: "Planos", icon: CreditCard },
   { href: "/coupons", label: "Cupons", icon: Ticket },
   { href: "/ads", label: "Anúncios", icon: Megaphone },
   { href: "/subscriptions", label: "Assinaturas", icon: FileText },
   { href: "/financial", label: "Financeiro", icon: DollarSign },
-  // { href: "/audit-logs", label: "Auditoria", icon: ClipboardList },
-  { href: "/reports", label: "Relatórios", icon: BarChart3 },
-  // { href: "/settings", label: "Configurações", icon: Settings },
   { href: "/admins", label: "Administradores", icon: Shield },
 ];
 
