@@ -182,4 +182,5 @@ export interface AdminUpdatePayload {
   email?: string;
   newPassword?: string;
   role?: string;
+  active?: boolean;
 }

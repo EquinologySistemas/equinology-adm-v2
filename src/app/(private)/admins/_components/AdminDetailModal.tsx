@@ -35,6 +35,8 @@ type AdminFormData = z.infer<typeof adminFormSchema>;
 interface AdminDetailModalProps {
   admin: Admin | null;
   open: boolean;
+  /** Criação, edição e ativar/desativar exigem super_admin (API). */
+  canManageAdmins?: boolean;
   onClose: () => void;
   onSaved: () => void;
 }
@@ -42,6 +44,7 @@ interface AdminDetailModalProps {
 export function AdminDetailModal({
   admin,
   open,
+  canManageAdmins = false,
   onClose,
   onSaved,
 }: AdminDetailModalProps) {
@@ -66,6 +69,10 @@ export function AdminDetailModal({
   });
 
   useEffect(() => {
+    if (!canManageAdmins) setIsEditing(false);
+  }, [canManageAdmins]);
+
+  useEffect(() => {
     if (!open) return;
     setIsEditing(false);
     setLoadError(null);
@@ -80,7 +87,7 @@ export function AdminDetailModal({
   }, [open, admin, reset]);
 
   async function onSubmit(data: AdminFormData) {
-    if (!admin) return;
+    if (!admin || !canManageAdmins) return;
     const payload: AdminUpdatePayload = {
       name: data.name,
       email: data.email.trim(),
@@ -90,23 +97,25 @@ export function AdminDetailModal({
       payload.newPassword = data.newPassword;
     }
     const res = await PatchAPI(`/admin/admins/${admin.id}`, payload, true);
-    if (res.status === 200) {
+    if (res.status === 200 || res.status === 201) {
       setIsEditing(false);
       onSaved();
       onClose();
     } else {
       const errorMessage =
-        res.status === 404
-          ? "A rota de atualização de administradores não está disponível no backend."
-          : typeof res.body === "string"
-            ? res.body
-            : (res.body?.message ?? "Erro ao salvar");
+        res.status === 403
+          ? "Apenas super administradores podem editar administradores."
+          : res.status === 404
+            ? "A rota de atualização de administradores não está disponível no backend."
+            : typeof res.body === "string"
+              ? res.body
+              : (res.body?.message ?? "Erro ao salvar");
       setLoadError(errorMessage);
     }
   }
 
   async function handleDeactivate() {
-    if (!admin) return;
+    if (!admin || !canManageAdmins) return;
     if (!confirm("Tem certeza que deseja desativar este administrador?")) {
       return;
     }
@@ -117,16 +126,18 @@ export function AdminDetailModal({
       true,
     );
     setIsDeactivating(false);
-    if (res.status === 200) {
+    if (res.status === 200 || res.status === 201) {
       onSaved();
       onClose();
     } else {
       const errorMessage =
-        res.status === 404
-          ? "A rota de desativação de administradores não está disponível no backend."
-          : typeof res.body === "string"
-            ? res.body
-            : (res.body?.message ?? "Erro ao desativar");
+        res.status === 403
+          ? "Apenas super administradores podem desativar administradores."
+          : res.status === 404
+            ? "A rota de desativação de administradores não está disponível no backend."
+            : typeof res.body === "string"
+              ? res.body
+              : (res.body?.message ?? "Erro ao desativar");
       setLoadError(errorMessage);
     }
   }
@@ -197,14 +208,16 @@ export function AdminDetailModal({
               </div>
             </dl>
             <div className="flex flex-wrap gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setIsEditing(true)}
-                className="rounded-xl bg-[var(--dash-accent)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--dash-accent-muted)]"
-              >
-                Editar
-              </button>
-              {admin.active !== false && (
+              {canManageAdmins && (
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(true)}
+                  className="rounded-xl bg-[var(--dash-accent)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--dash-accent-muted)]"
+                >
+                  Editar
+                </button>
+              )}
+              {canManageAdmins && admin.active !== false && (
                 <button
                   type="button"
                   onClick={handleDeactivate}

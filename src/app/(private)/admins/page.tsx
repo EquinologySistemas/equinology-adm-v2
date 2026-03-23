@@ -12,6 +12,7 @@ import { AdminCreateModal } from "./_components/AdminCreateModal";
 import { AdminDetailModal } from "./_components/AdminDetailModal";
 
 const API_ADMINS = "/admin/admins";
+const API_ADMIN_ME = "/admin/auth/me";
 const PAGE_SIZE = 20;
 
 const ROLE_LABELS: Record<string, string> = {
@@ -44,20 +45,30 @@ export default function AdminsPage() {
   const [detailAdmin, setDetailAdmin] = useState<Admin | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [page, setPage] = useState(1);
+  const [canManageAdmins, setCanManageAdmins] = useState(false);
 
   async function loadAdmins() {
     setLoading(true);
-    const res = await GetAPI(API_ADMINS, true);
+    const [meRes, res] = await Promise.all([
+      GetAPI(API_ADMIN_ME, true),
+      GetAPI(API_ADMINS, true),
+    ]);
     setLoading(false);
+
+    if (meRes.status === 200 && meRes.body?.admin?.role === "super_admin") {
+      setCanManageAdmins(true);
+    } else {
+      setCanManageAdmins(false);
+    }
+
     if (res.status === 200) {
       const data =
         res.body?.admins ??
         res.body?.data ??
         (Array.isArray(res.body) ? res.body : []);
       const list = Array.isArray(data) ? data : [];
-      const useMock = list.length === 0;
       setAdmins(list.map((a: Record<string, unknown>) => normalizeAdmin(a)));
-      setIsMockData(useMock);
+      setIsMockData(false);
     } else {
       setAdmins(mockAdmins.map((a) => normalizeAdmin(a)));
       setIsMockData(true);
@@ -155,14 +166,16 @@ export default function AdminsPage() {
             Listagem e gestão de contas administrativas
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setCreateOpen(true)}
-          className="inline-flex items-center gap-2 rounded-xl bg-[var(--dash-accent)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--dash-accent-muted)]"
-        >
-          <Plus className="h-4 w-4" />
-          Novo administrador
-        </button>
+        {canManageAdmins && (
+          <button
+            type="button"
+            onClick={() => setCreateOpen(true)}
+            className="inline-flex items-center gap-2 rounded-xl bg-[var(--dash-accent)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--dash-accent-muted)]"
+          >
+            <Plus className="h-4 w-4" />
+            Novo administrador
+          </button>
+        )}
       </div>
 
       {isMockData && <MockIndicator />}
@@ -210,6 +223,7 @@ export default function AdminsPage() {
       <AdminDetailModal
         admin={detailAdmin}
         open={!!detailAdmin}
+        canManageAdmins={canManageAdmins}
         onClose={() => setDetailAdmin(null)}
         onSaved={() => {
           setDetailAdmin(null);
@@ -219,6 +233,7 @@ export default function AdminsPage() {
 
       <AdminCreateModal
         open={createOpen}
+        canManageAdmins={canManageAdmins}
         onClose={() => setCreateOpen(false)}
         onSaved={() => {
           setCreateOpen(false);

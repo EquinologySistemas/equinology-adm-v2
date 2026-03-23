@@ -28,12 +28,14 @@ type CreateAdminFormData = z.infer<typeof createAdminSchema>;
 
 interface AdminCreateModalProps {
   open: boolean;
+  canManageAdmins?: boolean;
   onClose: () => void;
   onSaved: () => void;
 }
 
 export function AdminCreateModal({
   open,
+  canManageAdmins = false,
   onClose,
   onSaved,
 }: AdminCreateModalProps) {
@@ -68,6 +70,7 @@ export function AdminCreateModal({
   }, [open, reset]);
 
   async function onSubmit(data: CreateAdminFormData) {
+    if (!canManageAdmins) return;
     setSubmitError(null);
     const payload: AdminCreatePayload = {
       name: data.name.trim(),
@@ -76,16 +79,18 @@ export function AdminCreateModal({
       role: data.role,
     };
     const res = await PostAPI("/admin/admins", payload, true);
-    if (res.status === 200) {
+    if (res.status === 200 || res.status === 201) {
       onSaved();
       onClose();
     } else {
       const errorMessage =
-        res.status === 404
-          ? "A rota de criação de administradores não está disponível no backend."
-          : typeof res.body === "string"
-            ? res.body
-            : (res.body?.message ?? "Erro ao criar administrador");
+        res.status === 403
+          ? "Apenas super administradores podem criar administradores."
+          : res.status === 404
+            ? "A rota de criação de administradores não está disponível no backend."
+            : typeof res.body === "string"
+              ? res.body
+              : (res.body?.message ?? "Erro ao criar administrador");
       setSubmitError(errorMessage);
     }
   }
