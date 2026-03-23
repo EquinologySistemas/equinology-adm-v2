@@ -36,9 +36,8 @@ export interface Ad {
   redirectUrl: string;
   imageUrl: string;
   active?: boolean;
-  displayOrder?: number;
-  validFrom?: string;
-  validUntil?: string;
+  validFrom?: string | null;
+  validUntil?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }

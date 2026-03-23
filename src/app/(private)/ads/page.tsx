@@ -6,7 +6,7 @@ import type { Ad } from "@/types/admin";
 import { ExternalLink, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { AdsForm } from "./_components/AdsForm";
+import { AdsForm, type AdsFormSubmitPayload } from "./_components/AdsForm";
 
 const API_ADS = "/admin/ads";
 
@@ -36,26 +36,71 @@ export default function AdsPage() {
     loadAds();
   }, []);
 
-  async function handleCreate(data: Partial<Ad>) {
-    const res = await PostAPI(API_ADS, data, true);
+  function buildAdFormData(data: AdsFormSubmitPayload) {
+    const fd = new FormData();
+    fd.append("name", data.name);
+    fd.append("redirectUrl", data.redirectUrl ?? "");
+    fd.append("isActive", String(data.active !== false));
+    fd.append("validFrom", data.validFrom?.trim() ?? "");
+    fd.append("validUntil", data.validUntil?.trim() ?? "");
+    if (data.imageFile) {
+      fd.append("image", data.imageFile);
+    }
+    return fd;
+  }
+
+  async function handleCreate(data: AdsFormSubmitPayload) {
+    if (!data.imageFile) {
+      toast.error("Selecione uma imagem para o anúncio.");
+      return;
+    }
+    const res = await PostAPI(API_ADS, buildAdFormData(data), true);
     if (res.status === 200 || res.status === 201) {
       toast.success("Anúncio criado com sucesso.");
       setCreateOpen(false);
       loadAds();
     } else {
-      toast.error(res.body?.message ?? "Erro ao criar anúncio.");
+      const msg =
+        typeof res.body?.message === "string"
+          ? res.body.message
+          : Array.isArray(res.body?.message)
+            ? res.body.message.map((m: { defaultMessage?: string }) => m.defaultMessage).join(", ")
+            : "Erro ao criar anúncio.";
+      toast.error(msg);
     }
   }
 
-  async function handleUpdate(data: Partial<Ad>) {
+  async function handleUpdate(data: AdsFormSubmitPayload) {
     if (!editingAd?.id) return;
-    const res = await PutAPI(`${API_ADS}/${editingAd.id}`, data, true);
+    const res = data.imageFile
+      ? await PutAPI(
+          `${API_ADS}/${editingAd.id}`,
+          buildAdFormData(data),
+          true,
+        )
+      : await PutAPI(
+          `${API_ADS}/${editingAd.id}`,
+          {
+            name: data.name,
+            redirectUrl: data.redirectUrl || undefined,
+            isActive: data.active !== false,
+            validFrom: data.validFrom?.trim() ?? "",
+            validUntil: data.validUntil?.trim() ?? "",
+          },
+          true,
+        );
     if (res.status === 200) {
       toast.success("Anúncio atualizado.");
       setEditingAd(null);
       loadAds();
     } else {
-      toast.error(res.body?.message ?? "Erro ao atualizar anúncio.");
+      const msg =
+        typeof res.body?.message === "string"
+          ? res.body.message
+          : Array.isArray(res.body?.message)
+            ? res.body.message.map((m: { defaultMessage?: string }) => m.defaultMessage).join(", ")
+            : "Erro ao atualizar anúncio.";
+      toast.error(msg);
     }
   }
 
@@ -218,6 +263,7 @@ export default function AdsPage() {
       >
         {editingAd && (
           <AdsForm
+            key={editingAd.id}
             initialData={editingAd}
             onSubmit={handleUpdate}
             onCancel={() => setEditingAd(null)}
