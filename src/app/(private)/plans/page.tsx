@@ -32,10 +32,19 @@ export default function PlansPage() {
   const [page, setPage] = useState(1);
 
   function normalizePlan(apiPlan: Record<string, unknown>): Plan {
+    const uq = apiPlan.userQuantity;
+    const maxUsers =
+      typeof uq === "number" && !Number.isNaN(uq) ? uq : undefined;
+    const ac = apiPlan.activeClientsCount;
+    const activeClientsCount =
+      typeof ac === "number" && !Number.isNaN(ac) ? ac : 0;
+
     return {
       id: apiPlan.id as string,
       name: (apiPlan.name as string) ?? "",
       description: apiPlan.description as string | undefined,
+      maxUsers,
+      activeClientsCount,
       priceCard: apiPlan.creditCardPrice as number | undefined,
       pricePix: apiPlan.pixPrice as number | undefined,
       active: apiPlan.isActive as boolean | undefined,
@@ -91,11 +100,11 @@ export default function PlansPage() {
         getValue: (p) => p.name ?? "",
       },
       {
-        key: "maxUsers",
-        label: "Usuários",
+        key: "activeClientsCount",
+        label: "Clientes ativos",
         sortable: true,
-        getValue: (p) => p.maxUsers ?? 0,
-        render: (p) => p.maxUsers ?? "—",
+        getValue: (p) => p.activeClientsCount ?? 0,
+        render: (p) => p.activeClientsCount ?? 0,
       },
       {
         key: "priceCard",

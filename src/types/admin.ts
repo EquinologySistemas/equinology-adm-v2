@@ -2,7 +2,10 @@ export interface Plan {
   id: string;
   name: string;
   description?: string;
+  /** Limite configurado no plano (API: userQuantity). */
   maxUsers?: number;
+  /** Empresas com assinatura ACTIVE ou TRIAL não expirada neste plano. */
+  activeClientsCount?: number;
   priceCard?: number;
   pricePix?: number;
   active?: boolean;
