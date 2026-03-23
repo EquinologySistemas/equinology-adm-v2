@@ -8,7 +8,7 @@ export function SidebarContent({ children }: { children: React.ReactNode }) {
   return (
     <div
       className={cn(
-        "flex min-h-screen flex-1 flex-col pl-0 transition-[padding] duration-200",
+        "flex min-h-screen w-full min-w-0 flex-1 flex-col pl-0 transition-[padding] duration-200",
         collapsed ? "lg:pl-16" : "lg:pl-64",
       )}
     >

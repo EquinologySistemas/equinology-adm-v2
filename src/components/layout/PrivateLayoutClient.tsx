@@ -16,7 +16,7 @@ export function PrivateLayoutClient({
         <Sidebar />
         <SidebarContent>
           <Header />
-          <main className="dash-page flex-1 p-4 sm:p-6">{children}</main>
+          <main className="dash-page min-w-0 flex-1 p-4 sm:p-6">{children}</main>
         </SidebarContent>
       </div>
     </SidebarProvider>

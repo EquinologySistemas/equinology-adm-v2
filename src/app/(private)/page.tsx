@@ -1,41 +1,60 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useApiContext } from "@/context/ApiContext";
-import { MockIndicator } from "@/components/ui/MockIndicator";
-import { mockDashboardKpis } from "@/data/mock";
+import {
+  getFinancialSummary,
+  getSubscriptionTransactions,
+} from "@/lib/financial-api";
+import type { FinancialSummary, Subscription, SubscriptionTransaction } from "@/types/admin";
 import {
   Users,
   CreditCard,
   Ticket,
   Megaphone,
   TrendingUp,
+  TrendingDown,
   FileText,
-  DollarSign,
+  Building2,
+  ArrowRight,
 } from "lucide-react";
 
-interface DashboardMetrics {
+const API_USERS = "/admin/users";
+const API_COMPANIES = "/admin/companies";
+const API_PLANS = "/signature-plan";
+const API_COUPONS = "/admin/coupons";
+const API_ADS = "/admin/ads";
+const API_SIGNATURE = "/admin/signature";
+const API_ADMIN_ME = "/admin/auth/me";
+
+const txStatusLabels: Record<string, string> = {
+  PAID: "Pago",
+  RECEIVED: "Recebido",
+  PENDING: "Pendente",
+  OVERDUE: "Vencido",
+};
+
+const subscriptionStatusLabels: Record<string, string> = {
+  ACTIVE: "Ativa",
+  INACTIVE: "Inativa",
+  TRIAL: "Trial",
+};
+
+interface OperationalCounts {
   usersTotal: number;
+  companiesTotal: number;
   plansActive: number;
   couponsTotal: number;
   adsActive: number;
-  mrr: number;
-  subscriptionsActive: number;
-  subscriptionsNewMonth: number;
-  subscriptionsCancelledMonth: number;
-  churnRate: number;
 }
 
-const defaultMetrics: DashboardMetrics = {
+const defaultOperational: OperationalCounts = {
   usersTotal: 0,
+  companiesTotal: 0,
   plansActive: 0,
   couponsTotal: 0,
   adsActive: 0,
-  mrr: 0,
-  subscriptionsActive: 0,
-  subscriptionsNewMonth: 0,
-  subscriptionsCancelledMonth: 0,
-  churnRate: 0,
 };
 
 function MetricCard({
@@ -73,9 +92,39 @@ function MetricCard({
   );
 }
 
+function normalizeSubscription(row: Record<string, unknown>): Subscription {
+  return {
+    id: (row.id as string) ?? "",
+    companyId: (row.companyId as string) ?? "",
+    companyName: (row.companyName as string) ?? undefined,
+    companyPrimaryEmail: (row.companyPrimaryEmail as string) ?? undefined,
+    planId: (row.planId as string) ?? "",
+    planName: (row.planName as string) ?? undefined,
+    status: (row.status as Subscription["status"]) ?? "INACTIVE",
+    expirationDate: row.expirationDate as string | undefined,
+    yearly: row.yearly as boolean | undefined,
+    createdAt: (row.createdAt as string) ?? "",
+  };
+}
+
 export default function DashboardPage() {
   const { GetAPI } = useApiContext();
-  const [metrics, setMetrics] = useState<DashboardMetrics>(defaultMetrics);
+
+  /** Compatível com a assinatura esperada por financial-api (2º parâmetro opcional). */
+  function getApiLoose(path: string, auth?: boolean) {
+    return GetAPI(path, auth ?? true);
+  }
+
+  const [summary, setSummary] = useState<FinancialSummary | null>(null);
+  const [operational, setOperational] =
+    useState<OperationalCounts>(defaultOperational);
+  const [recentTransactions, setRecentTransactions] = useState<
+    SubscriptionTransaction[]
+  >([]);
+  const [recentSubscriptions, setRecentSubscriptions] = useState<
+    Subscription[]
+  >([]);
+  const [welcomeName, setWelcomeName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -83,17 +132,72 @@ export default function DashboardPage() {
 
     async function load() {
       try {
-        const [usersRes, plansRes, couponsRes, adsRes] = await Promise.all([
-          GetAPI("/admin/users", true),
-          GetAPI("/signature-plan", true),
-          GetAPI("/admin/coupons", true),
-          GetAPI("/admin/ads", true),
+        const [
+          summaryData,
+          txData,
+          usersRes,
+          companiesRes,
+          plansRes,
+          couponsRes,
+          adsRes,
+          signatureRes,
+          meRes,
+        ] = await Promise.all([
+          getFinancialSummary(getApiLoose),
+          getSubscriptionTransactions(getApiLoose, { page: 1, pageSize: 5 }),
+          GetAPI(API_USERS, true),
+          GetAPI(API_COMPANIES, true),
+          GetAPI(API_PLANS, true),
+          GetAPI(API_COUPONS, true),
+          GetAPI(API_ADS, true),
+          GetAPI(API_SIGNATURE, true),
+          GetAPI(API_ADMIN_ME, true),
         ]);
 
         if (cancelled) return;
 
+        if (meRes.status === 200 && meRes.body?.admin) {
+          const a = meRes.body.admin as {
+            name?: string;
+            email?: string;
+          };
+          setWelcomeName(a.name?.trim() || a.email || null);
+        } else {
+          setWelcomeName(null);
+        }
+
+        if (summaryData) {
+          setSummary(summaryData);
+        } else {
+          setSummary(null);
+        }
+
+        setRecentTransactions(txData?.transactions ?? []);
+
+        if (signatureRes.status === 200) {
+          const data =
+            signatureRes.body?.subscriptions ?? signatureRes.body?.data ?? [];
+          const list = Array.isArray(data) ? data : [];
+          const subs = list.map((row: Record<string, unknown>) =>
+            normalizeSubscription(row),
+          );
+          const sorted = [...subs].sort((a, b) => {
+            const ta = new Date(a.createdAt).getTime();
+            const tb = new Date(b.createdAt).getTime();
+            return tb - ta;
+          });
+          setRecentSubscriptions(sorted.slice(0, 5));
+        } else {
+          setRecentSubscriptions([]);
+        }
+
         const users =
           usersRes.status === 200 ? (usersRes.body?.users ?? []) : [];
+        const companiesRaw =
+          companiesRes.status === 200
+            ? companiesRes.body?.companies ??
+              (Array.isArray(companiesRes.body) ? companiesRes.body : [])
+            : [];
         const plans =
           plansRes.status === 200
             ? Array.isArray(plansRes.body)
@@ -117,33 +221,27 @@ export default function DashboardPage() {
         const activePlans = plansList.filter(
           (p: { active?: boolean }) => p.active !== false,
         );
-
         const adsList = Array.isArray(ads) ? ads : [];
         const activeAds = adsList.filter(
           (a: { active?: boolean }) => a.active !== false,
         );
+        const companiesList = Array.isArray(companiesRaw) ? companiesRaw : [];
 
-        const hasRealKpis = false;
-        setMetrics((prev) => ({
-          ...prev,
+        setOperational({
           usersTotal: Array.isArray(users) ? users.length : 0,
+          companiesTotal: companiesList.length,
           plansActive: activePlans.length,
           couponsTotal: Array.isArray(coupons) ? coupons.length : 0,
           adsActive: activeAds.length,
-          subscriptionsActive: hasRealKpis
-            ? 0
-            : mockDashboardKpis.subscriptionsActive,
-          mrr: hasRealKpis ? 0 : mockDashboardKpis.mrr,
-          subscriptionsNewMonth: hasRealKpis
-            ? 0
-            : mockDashboardKpis.subscriptionsNewMonth,
-          subscriptionsCancelledMonth: hasRealKpis
-            ? 0
-            : mockDashboardKpis.subscriptionsCancelledMonth,
-          churnRate: hasRealKpis ? 0 : mockDashboardKpis.churnRate,
-        }));
+        });
       } catch {
-        if (!cancelled) setMetrics(defaultMetrics);
+        if (!cancelled) {
+          setSummary(null);
+          setOperational(defaultOperational);
+          setRecentTransactions([]);
+          setRecentSubscriptions([]);
+          setWelcomeName(null);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -155,15 +253,35 @@ export default function DashboardPage() {
     };
   }, [GetAPI]);
 
+  const revenueTrendPercent = useMemo(() => {
+    if (!summary || summary.revenuePreviousMonth <= 0) return null;
+    return Math.abs(
+      ((summary.revenueMonth - summary.revenuePreviousMonth) /
+        summary.revenuePreviousMonth) *
+        100,
+    );
+  }, [summary]);
+
   if (loading) {
     return (
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {[1, 2, 3, 4].map((i) => (
-          <div
-            key={i}
-            className="h-28 animate-pulse rounded-xl border border-[var(--dash-border)] bg-[var(--dash-card)]"
-          />
-        ))}
+      <div className="space-y-8">
+        <div className="h-8 w-48 animate-pulse rounded-lg bg-[var(--dash-border)]" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="h-28 animate-pulse rounded-xl border border-[var(--dash-border)] bg-[var(--dash-card)]"
+            />
+          ))}
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div
+              key={i}
+              className="h-28 animate-pulse rounded-xl border border-[var(--dash-border)] bg-[var(--dash-card)]"
+            />
+          ))}
+        </div>
       </div>
     );
   }
@@ -172,96 +290,218 @@ export default function DashboardPage() {
     <div className="space-y-8">
       <div>
         <h2 className="text-xl font-semibold text-[var(--dash-text)]">
-          Visão geral
+          {welcomeName ? `Olá, ${welcomeName}` : "Visão geral"}
         </h2>
         <p className="mt-1 text-sm text-[var(--dash-text-muted)]">
-          Métricas e indicadores do painel administrativo
+          {welcomeName
+            ? "Resumo financeiro, cadastros e atividade recente do painel."
+            : "Métricas e indicadores do painel administrativo"}
         </p>
       </div>
 
       <div>
         <h3 className="mb-4 text-sm font-medium text-[var(--dash-text-muted)]">
-          Contagens
+          Financeiro e carteira de assinaturas
         </h3>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {summary ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="rounded-xl border border-[var(--dash-border)] bg-[var(--dash-card)] p-5 shadow-sm">
+              <p className="text-sm font-medium text-[var(--dash-text-muted)]">
+                Receita do mês
+              </p>
+              <p className="mt-0.5 text-xs text-[var(--dash-text-muted)]">
+                Pagamentos confirmados no mês corrente
+              </p>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <p className="text-2xl font-semibold text-[var(--dash-text)]">
+                  {new Intl.NumberFormat("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
+                  }).format(summary.revenueMonth)}
+                </p>
+                {summary.revenuePreviousMonth > 0 &&
+                  revenueTrendPercent !== null && (
+                    <span
+                      className={`flex items-center gap-1 text-xs ${
+                        summary.revenueMonth >= summary.revenuePreviousMonth
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {summary.revenueMonth >= summary.revenuePreviousMonth ? (
+                        <TrendingUp className="h-3 w-3" />
+                      ) : (
+                        <TrendingDown className="h-3 w-3" />
+                      )}
+                      {revenueTrendPercent.toFixed(1)}%
+                    </span>
+                  )}
+              </div>
+              {summary.revenuePreviousMonth > 0 && (
+                <p className="mt-1 text-xs text-[var(--dash-text-muted)]">
+                  Mês anterior:{" "}
+                  {new Intl.NumberFormat("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
+                  }).format(summary.revenuePreviousMonth)}
+                </p>
+              )}
+            </div>
+            <div className="rounded-xl border border-[var(--dash-border)] bg-[var(--dash-card)] p-5 shadow-sm">
+              <p className="text-sm font-medium text-[var(--dash-text-muted)]">
+                Assinaturas ativas
+              </p>
+              <p className="mt-1 text-2xl font-semibold text-[var(--dash-text)]">
+                {summary.activeSubscriptions}
+              </p>
+            </div>
+            <div className="rounded-xl border border-[var(--dash-border)] bg-[var(--dash-card)] p-5 shadow-sm">
+              <p className="text-sm font-medium text-[var(--dash-text-muted)]">
+                Em trial
+              </p>
+              <p className="mt-1 text-2xl font-semibold text-[var(--dash-text)]">
+                {summary.trialSubscriptions}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-[var(--dash-text-muted)]">
+            Não foi possível carregar o resumo financeiro.
+          </p>
+        )}
+      </div>
+
+      <div>
+        <h3 className="mb-4 text-sm font-medium text-[var(--dash-text-muted)]">
+          Cadastro e catálogo
+        </h3>
+        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
           <MetricCard
             title="Usuários"
-            value={metrics.usersTotal}
+            value={operational.usersTotal}
             icon={Users}
           />
           <MetricCard
+            title="Empresas"
+            value={operational.companiesTotal}
+            icon={Building2}
+          />
+          <MetricCard
             title="Planos ativos"
-            value={metrics.plansActive}
+            value={operational.plansActive}
             icon={CreditCard}
           />
           <MetricCard
             title="Cupons"
-            value={metrics.couponsTotal}
+            value={operational.couponsTotal}
             icon={Ticket}
           />
           <MetricCard
             title="Anúncios ativos"
-            value={metrics.adsActive}
+            value={operational.adsActive}
             icon={Megaphone}
           />
         </div>
       </div>
 
-      <div>
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          <h3 className="text-sm font-medium text-[var(--dash-text-muted)]">
-            KPIs de negócio
-          </h3>
-          <MockIndicator variant="badge" />
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="rounded-xl border border-[var(--dash-border)] bg-[var(--dash-card)] p-5 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-medium text-[var(--dash-text-muted)]">
+              Últimas transações
+            </h3>
+            <Link
+              href="/financial"
+              className="inline-flex items-center gap-1 text-sm font-medium text-[var(--dash-accent)] hover:underline"
+            >
+              Ver todas
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </Link>
+          </div>
+          {recentTransactions.length === 0 ? (
+            <p className="mt-3 text-sm text-[var(--dash-text-muted)]">
+              Nenhuma transação encontrada.
+            </p>
+          ) : (
+            <ul className="mt-3 divide-y divide-[var(--dash-border)]">
+              {recentTransactions.map((t) => {
+                const statusUpper = (t.status ?? "").toUpperCase();
+                const label =
+                  txStatusLabels[statusUpper] ?? t.status ?? "—";
+                return (
+                  <li
+                    key={t.id}
+                    className="flex flex-col gap-0.5 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-[var(--dash-text)]">
+                        {t.companyName || "—"}
+                      </p>
+                      <p className="text-xs text-[var(--dash-text-muted)]">
+                        {t.planName} · {label}
+                      </p>
+                    </div>
+                    <p className="text-sm font-medium text-[var(--dash-text)] tabular-nums">
+                      {new Intl.NumberFormat("pt-BR", {
+                        style: "currency",
+                        currency: "BRL",
+                      }).format(t.value)}
+                    </p>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <MetricCard
-            title="MRR"
-            value={
-              metrics.mrr > 0
-                ? new Intl.NumberFormat("pt-BR", {
-                    style: "currency",
-                    currency: "BRL",
-                  }).format(metrics.mrr)
-                : "—"
-            }
-            icon={DollarSign}
-            subtitle="Receita recorrente mensal"
-          />
-          <MetricCard
-            title="Assinaturas ativas"
-            value={metrics.subscriptionsActive}
-            icon={FileText}
-          />
-          <MetricCard
-            title="Novas no mês"
-            value={metrics.subscriptionsNewMonth}
-            icon={TrendingUp}
-            subtitle="Assinaturas"
-          />
-          <MetricCard
-            title="Churn"
-            value={
-              metrics.churnRate > 0 ? `${metrics.churnRate.toFixed(1)}%` : "—"
-            }
-            icon={TrendingUp}
-            subtitle="Taxa de cancelamento"
-          />
-        </div>
-      </div>
 
-      <div className="rounded-xl border border-[var(--dash-border)] bg-[var(--dash-card)] p-5 shadow-sm">
-        <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-sm font-medium text-[var(--dash-text-muted)]">
-            Atividade recente
-          </h3>
-          <MockIndicator variant="badge" />
+        <div className="rounded-xl border border-[var(--dash-border)] bg-[var(--dash-card)] p-5 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-medium text-[var(--dash-text-muted)]">
+              Assinaturas recentes
+            </h3>
+            <Link
+              href="/subscriptions"
+              className="inline-flex items-center gap-1 text-sm font-medium text-[var(--dash-accent)] hover:underline"
+            >
+              Ver todas
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </Link>
+          </div>
+          {recentSubscriptions.length === 0 ? (
+            <p className="mt-3 text-sm text-[var(--dash-text-muted)]">
+              Nenhuma assinatura encontrada.
+            </p>
+          ) : (
+            <ul className="mt-3 divide-y divide-[var(--dash-border)]">
+              {recentSubscriptions.map((s) => (
+                <li
+                  key={s.id}
+                  className="flex flex-col gap-0.5 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-[var(--dash-text)]">
+                      {s.companyName || "—"}
+                    </p>
+                    <p className="text-xs text-[var(--dash-text-muted)]">
+                      {s.planName ?? "—"} ·{" "}
+                      {subscriptionStatusLabels[s.status] ?? s.status}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-[var(--dash-text-muted)]">
+                    <FileText className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                    {s.createdAt
+                      ? new Date(s.createdAt).toLocaleDateString("pt-BR", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                        })
+                      : "—"}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
-        <ul className="mt-3 space-y-2 text-sm text-[var(--dash-text-muted)]">
-          <li>• Plano Profissional — alterado por admin (mock)</li>
-          <li>• Cupom PROMO20 — criado (mock)</li>
-          <li>• Usuário Ana Oliveira — status ativado (mock)</li>
-        </ul>
       </div>
     </div>
   );
