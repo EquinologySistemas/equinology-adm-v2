@@ -1,11 +1,10 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
 import { getTokenCookieName } from "@/lib/auth-cookies";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 
 export function middleware(request: NextRequest) {
   const tokenCookieName = getTokenCookieName();
   const token = request.cookies.get(tokenCookieName)?.value;
-
   if (request.nextUrl.pathname === "/login") {
     if (token) {
       return NextResponse.redirect(new URL("/", request.url));
