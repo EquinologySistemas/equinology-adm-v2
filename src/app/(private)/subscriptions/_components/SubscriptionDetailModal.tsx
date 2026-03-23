@@ -2,6 +2,7 @@
 
 import { Modal } from "@/components/ui/Modal";
 import { useApiContext } from "@/context/ApiContext";
+import { planFromApi } from "@/lib/plans-api";
 import type { Plan, Subscription } from "@/types/admin";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
@@ -186,19 +187,7 @@ export function SubscriptionDetailModal({
     if (res.status === 200) {
       const raw = res.body?.plans ?? res.body ?? [];
       const list = Array.isArray(raw) ? raw : [];
-      setPlans(
-        list.map((p: Record<string, unknown>) => ({
-          id: p.id,
-          name: p.name,
-          description: p.description,
-          maxUsers: p.userQuantity,
-          priceCard: p.creditCardPrice,
-          pricePix: p.pixPrice,
-          active: p.isActive,
-          annualDiscountPercent: p.yearlyDiscount,
-          trialDays: p.trialDays,
-        })),
-      );
+      setPlans(list.map((p: Record<string, unknown>) => planFromApi(p)));
     }
   }
 

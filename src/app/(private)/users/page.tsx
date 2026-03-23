@@ -3,7 +3,6 @@
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { Pagination } from "@/components/ui/Pagination";
 import { useApiContext } from "@/context/ApiContext";
-import { mockUsers } from "@/data/mock";
 import { formatPhone } from "@/lib/utils";
 import type { User as UserType } from "@/types/admin";
 import { Plus, Search, User } from "lucide-react";
@@ -13,6 +12,51 @@ import { UserDetailModal } from "./_components/UserDetailModal";
 
 const API_USERS = "/admin/users";
 const PAGE_SIZE = 20;
+
+const FALLBACK_USERS: UserType[] = [
+  {
+    id: "u1",
+    name: "Maria Silva",
+    email: "maria.silva@haras.com.br",
+    phone: "(11) 98765-4321",
+    company: "Haras Silva",
+    role: "Veterinária",
+    status: "active",
+    planName: "Profissional",
+    createdAt: "2024-06-15T10:00:00Z",
+  },
+  {
+    id: "u2",
+    name: "João Santos",
+    email: "joao@equiclinic.com",
+    phone: "(21) 99876-5432",
+    company: "EquiClinic",
+    role: "Gestor",
+    status: "active",
+    planName: "Empresarial",
+    createdAt: "2024-08-20T14:30:00Z",
+  },
+  {
+    id: "u3",
+    name: "Ana Oliveira",
+    email: "ana.oliveira@vetequus.com",
+    phone: "(31) 91234-5678",
+    company: "VetEquus",
+    role: "Administrador",
+    status: "active",
+    planName: "Profissional",
+    createdAt: "2025-02-25T09:00:00Z",
+  },
+  {
+    id: "u4",
+    name: "Carlos Mendes",
+    email: "carlos@haras.com.br",
+    company: "Haras Mendes",
+    status: "blocked",
+    planName: "Empresarial",
+    createdAt: "2024-11-01T08:00:00Z",
+  },
+];
 
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: "Administrador",
@@ -54,7 +98,7 @@ export default function UsersPage() {
       const list = Array.isArray(data) ? data : [];
       setUsers(list.map((u: Record<string, unknown>) => normalizeUser(u)));
     } else {
-      setUsers(mockUsers);
+      setUsers(FALLBACK_USERS);
     }
   }
 

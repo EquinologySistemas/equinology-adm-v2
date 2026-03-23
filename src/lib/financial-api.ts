@@ -25,12 +25,12 @@ export async function getFinancialSummary(
     showError?: boolean,
   ) => Promise<{
     status: number;
-    body?: any;
+    body?: unknown;
   }>,
 ): Promise<FinancialSummary | null> {
   const res = await GetAPI(API_FINANCIAL_SUMMARY, true);
-  if (res.status === 200 && res.body) {
-    return financialSummaryFromApi(res.body);
+  if (res.status === 200 && res.body && typeof res.body === "object") {
+    return financialSummaryFromApi(res.body as Record<string, unknown>);
   }
   return null;
 }
@@ -41,7 +41,7 @@ export async function getSubscriptionTransactions(
     showError?: boolean,
   ) => Promise<{
     status: number;
-    body?: any;
+    body?: unknown;
   }>,
   params?: GetSubscriptionTransactionsParams,
 ): Promise<GetSubscriptionTransactionsResponse | null> {
@@ -58,16 +58,18 @@ export async function getSubscriptionTransactions(
     : API_FINANCIAL_TRANSACTIONS;
 
   const res = await GetAPI(url, true);
-  if (res.status === 200 && res.body) {
+  if (res.status === 200 && res.body && typeof res.body === "object") {
+    const body = res.body as Record<string, unknown>;
+    const rawList = body.transactions;
     return {
-      transactions: Array.isArray(res.body.transactions)
-        ? res.body.transactions.map((t: any) =>
-            subscriptionTransactionFromApi(t),
+      transactions: Array.isArray(rawList)
+        ? rawList.map((t: unknown) =>
+            subscriptionTransactionFromApi(t as Record<string, unknown>),
           )
         : [],
-      total: res.body.total ?? 0,
-      page: res.body.page ?? 1,
-      pageSize: res.body.pageSize ?? 20,
+      total: typeof body.total === "number" ? body.total : 0,
+      page: typeof body.page === "number" ? body.page : 1,
+      pageSize: typeof body.pageSize === "number" ? body.pageSize : 20,
     };
   }
   return null;

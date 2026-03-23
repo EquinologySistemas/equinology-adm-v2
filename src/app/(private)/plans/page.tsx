@@ -3,6 +3,7 @@
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { Pagination } from "@/components/ui/Pagination";
 import { useApiContext } from "@/context/ApiContext";
+import { planFromApi } from "@/lib/plans-api";
 import type { Plan } from "@/types/admin";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -31,28 +32,6 @@ export default function PlansPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
 
-  function normalizePlan(apiPlan: Record<string, unknown>): Plan {
-    const uq = apiPlan.userQuantity;
-    const maxUsers =
-      typeof uq === "number" && !Number.isNaN(uq) ? uq : undefined;
-    const ac = apiPlan.activeClientsCount;
-    const activeClientsCount =
-      typeof ac === "number" && !Number.isNaN(ac) ? ac : 0;
-
-    return {
-      id: apiPlan.id as string,
-      name: (apiPlan.name as string) ?? "",
-      description: apiPlan.description as string | undefined,
-      maxUsers,
-      activeClientsCount,
-      priceCard: apiPlan.creditCardPrice as number | undefined,
-      pricePix: apiPlan.pixPrice as number | undefined,
-      active: apiPlan.isActive as boolean | undefined,
-      annualDiscountPercent: apiPlan.yearlyDiscount as number | undefined,
-      trialDays: apiPlan.trialDays as number | undefined,
-    };
-  }
-
   async function loadPlans() {
     setLoading(true);
     const res = await GetAPI(API_PLANS, true);
@@ -62,7 +41,7 @@ export default function PlansPage() {
         ? res.body
         : (res.body?.plans ?? res.body?.data ?? []);
       const list = Array.isArray(data) ? data : [];
-      setPlans(list.map((p: Record<string, unknown>) => normalizePlan(p)));
+      setPlans(list.map((p: Record<string, unknown>) => planFromApi(p)));
     } else {
       toast.error("Erro ao carregar planos.");
     }

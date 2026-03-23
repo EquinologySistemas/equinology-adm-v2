@@ -4,6 +4,7 @@ import { Modal } from "@/components/ui/Modal";
 import { useApiContext } from "@/context/ApiContext";
 import type { Company, Plan, Coupon } from "@/types/admin";
 import { couponFromApi } from "@/lib/coupons-api";
+import { planFromApi } from "@/lib/plans-api";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
@@ -58,28 +59,9 @@ export function SubscriptionCreateModal({
       if (plansRes.status === 200) {
         const raw = plansRes.body?.plans ?? plansRes.body ?? [];
         const list = Array.isArray(raw) ? raw : [];
-        const normalized: Plan[] = list.map((p: Record<string, unknown>) => {
-          const plan: Plan = {
-            id: String(p.id ?? ""),
-            name: String(p.name ?? ""),
-            description: p.description ? String(p.description) : undefined,
-            maxUsers:
-              typeof p.userQuantity === "number" ? p.userQuantity : undefined,
-            priceCard:
-              typeof p.creditCardPrice === "number"
-                ? p.creditCardPrice
-                : undefined,
-            pricePix: typeof p.pixPrice === "number" ? p.pixPrice : undefined,
-            active: p.isActive === true,
-            annualDiscountPercent:
-              typeof p.yearlyDiscount === "number"
-                ? p.yearlyDiscount
-                : undefined,
-            trialDays:
-              typeof p.trialDays === "number" ? p.trialDays : undefined,
-          };
-          return plan;
-        });
+        const normalized: Plan[] = list.map((p: Record<string, unknown>) =>
+          planFromApi(p),
+        );
         setPlans(normalized);
         if (normalized.length) setPlanId(normalized[0].id);
       }

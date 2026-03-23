@@ -82,9 +82,7 @@ export function PlansForm({
       name: data.name.trim(),
       description: data.description?.trim() || undefined,
       maxUsers:
-        data.maxUsers === undefined ||
-        data.maxUsers === "" ||
-        Number.isNaN(Number(data.maxUsers))
+        data.maxUsers === undefined || Number.isNaN(Number(data.maxUsers))
           ? undefined
           : Number(data.maxUsers),
       active: data.active,

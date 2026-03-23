@@ -4,7 +4,6 @@ import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { Pagination } from "@/components/ui/Pagination";
 import { useApiContext } from "@/context/ApiContext";
 import { MockIndicator } from "@/components/ui/MockIndicator";
-import { mockAdmins } from "@/data/mock";
 import type { Admin } from "@/types/admin";
 import { Plus, Search, Shield } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -15,6 +14,25 @@ const API_ADMINS = "/admin/admins";
 const API_ADMIN_ME = "/admin/auth/me";
 const PAGE_SIZE = 20;
 
+const FALLBACK_ADMINS: Admin[] = [
+  {
+    id: "admin-1",
+    email: "admin@equinology.com",
+    name: "Administrador Principal",
+    role: "super_admin",
+    active: true,
+    createdAt: "2024-01-10T08:00:00Z",
+  },
+  {
+    id: "admin-2",
+    email: "suporte@equinology.com",
+    name: "Equipe Suporte",
+    role: "support",
+    active: true,
+    createdAt: "2024-06-01T12:00:00Z",
+  },
+];
+
 const ROLE_LABELS: Record<string, string> = {
   super_admin: "Super Admin",
   support: "Suporte",
@@ -24,15 +42,16 @@ function roleLabel(role: string | undefined): string {
   return (role && ROLE_LABELS[role]) || role || "—";
 }
 
-function normalizeAdmin(a: Record<string, unknown>): Admin {
+function normalizeAdmin(a: unknown): Admin {
+  const r = a as Record<string, unknown>;
   return {
-    ...a,
-    id: a.id as string,
-    email: a.email as string,
-    name: (a.name as string) ?? undefined,
-    role: (a.role as string) ?? undefined,
-    active: a.active !== undefined ? (a.active as boolean) : true,
-    createdAt: (a.createdAt as string) ?? undefined,
+    ...r,
+    id: r.id as string,
+    email: r.email as string,
+    name: (r.name as string) ?? undefined,
+    role: (r.role as string) ?? undefined,
+    active: r.active !== undefined ? (r.active as boolean) : true,
+    createdAt: (r.createdAt as string) ?? undefined,
   } as Admin;
 }
 
@@ -70,7 +89,7 @@ export default function AdminsPage() {
       setAdmins(list.map((a: Record<string, unknown>) => normalizeAdmin(a)));
       setIsMockData(false);
     } else {
-      setAdmins(mockAdmins.map((a) => normalizeAdmin(a)));
+      setAdmins(FALLBACK_ADMINS);
       setIsMockData(true);
     }
   }
