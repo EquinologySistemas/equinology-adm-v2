@@ -3,9 +3,10 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import type { Ad } from "@/types/admin";
-import { useEffect, useState } from "react";
+import type { Ad, AdCityTarget, AdScope } from "@/types/admin";
+import { useEffect, useMemo, useState } from "react";
 import { ImageIcon } from "lucide-react";
+import { LocationTargeting } from "./LocationTargeting";
 
 const adSchema = z
   .object({
@@ -14,6 +15,14 @@ const adSchema = z
     active: z.boolean().optional(),
     validFrom: z.string().optional(),
     validUntil: z.string().optional(),
+    scope: z.enum(["GLOBAL", "REGIONAL", "MUNICIPAL"]),
+    targetStates: z.array(z.string().length(2)),
+    targetCities: z.array(
+      z.object({
+        uf: z.string().length(2),
+        city: z.string().min(1),
+      }),
+    ),
   })
   .superRefine((data, ctx) => {
     const from = data.validFrom?.trim() ?? "";
@@ -29,6 +38,20 @@ const adSchema = z
       if (!hasUntil) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message, path: ["validUntil"] });
       }
+    }
+    if (data.scope === "REGIONAL" && data.targetStates.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Selecione pelo menos um estado.",
+        path: ["targetStates"],
+      });
+    }
+    if (data.scope === "MUNICIPAL" && data.targetCities.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Selecione pelo menos uma cidade.",
+        path: ["targetCities"],
+      });
     }
   });
 
@@ -55,12 +78,24 @@ export function AdsForm({ initialData, onSubmit, onCancel }: AdsFormProps) {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
+  const initialScope: AdScope = initialData?.scope ?? "GLOBAL";
+  const initialStates = useMemo(
+    () => initialData?.targetStates ?? [],
+    [initialData?.targetStates],
+  );
+  const initialCities: AdCityTarget[] = useMemo(
+    () => initialData?.targetCities ?? [],
+    [initialData?.targetCities],
+  );
+
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
     setError,
     clearErrors,
+    watch,
+    setValue,
   } = useForm<AdFormData>({
     resolver: zodResolver(adSchema),
     defaultValues: {
@@ -69,8 +104,15 @@ export function AdsForm({ initialData, onSubmit, onCancel }: AdsFormProps) {
       active: initialData?.active !== false,
       validFrom: formatDateInput(initialData?.validFrom),
       validUntil: formatDateInput(initialData?.validUntil),
+      scope: initialScope,
+      targetStates: initialStates,
+      targetCities: initialCities,
     },
   });
+
+  const scope = watch("scope");
+  const targetStates = watch("targetStates");
+  const targetCities = watch("targetCities");
 
   useEffect(() => {
     return () => {
@@ -218,6 +260,32 @@ export function AdsForm({ initialData, onSubmit, onCancel }: AdsFormProps) {
         Deixe as duas datas em branco para o anúncio permanecer válido sem limite de tempo
         (enquanto estiver ativo). Se preencher uma data, a outra também é obrigatória.
       </p>
+
+      <LocationTargeting
+        scope={scope}
+        targetStates={targetStates}
+        targetCities={targetCities}
+        onScopeChange={(next) => {
+          setValue("scope", next, { shouldDirty: true });
+          if (next === "GLOBAL") {
+            setValue("targetStates", [], { shouldDirty: true });
+            setValue("targetCities", [], { shouldDirty: true });
+          } else if (next === "REGIONAL") {
+            setValue("targetCities", [], { shouldDirty: true });
+          } else if (next === "MUNICIPAL") {
+            setValue("targetStates", [], { shouldDirty: true });
+          }
+        }}
+        onStatesChange={(next) =>
+          setValue("targetStates", next, { shouldDirty: true, shouldValidate: true })
+        }
+        onCitiesChange={(next) =>
+          setValue("targetCities", next, { shouldDirty: true, shouldValidate: true })
+        }
+        statesError={errors.targetStates?.message}
+        citiesError={errors.targetCities?.message}
+      />
+
       <div className="flex items-center gap-2">
         <input
           type="checkbox"

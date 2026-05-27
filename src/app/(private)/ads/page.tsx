@@ -10,6 +10,41 @@ import { AdsForm, type AdsFormSubmitPayload } from "./_components/AdsForm";
 
 const API_ADS = "/admin/ads";
 
+function ScopeBadge({ ad }: { ad: Ad }) {
+  const scope = ad.scope ?? "GLOBAL";
+  if (scope === "GLOBAL") {
+    return (
+      <span className="inline-flex rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
+        Global
+      </span>
+    );
+  }
+  if (scope === "REGIONAL") {
+    const count = ad.targetStates?.length ?? 0;
+    const tooltip = (ad.targetStates ?? []).join(", ");
+    return (
+      <span
+        title={tooltip}
+        className="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800"
+      >
+        Estadual · {count} UF{count === 1 ? "" : "s"}
+      </span>
+    );
+  }
+  const cities = ad.targetCities ?? [];
+  const stateCount = new Set(cities.map((c) => c.uf)).size;
+  const tooltip = cities.map((c) => `${c.city}/${c.uf}`).join(", ");
+  return (
+    <span
+      title={tooltip}
+      className="inline-flex rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800"
+    >
+      Municipal · {cities.length} cidade{cities.length === 1 ? "" : "s"}
+      {stateCount > 1 ? ` (${stateCount} UFs)` : ""}
+    </span>
+  );
+}
+
 export default function AdsPage() {
   const { GetAPI, PostAPI, PutAPI, DeleteAPI } = useApiContext();
   const [ads, setAds] = useState<Ad[]>([]);
@@ -43,6 +78,9 @@ export default function AdsPage() {
     fd.append("isActive", String(data.active !== false));
     fd.append("validFrom", data.validFrom?.trim() ?? "");
     fd.append("validUntil", data.validUntil?.trim() ?? "");
+    fd.append("scope", data.scope);
+    fd.append("targetStates", JSON.stringify(data.targetStates ?? []));
+    fd.append("targetCities", JSON.stringify(data.targetCities ?? []));
     if (data.imageFile) {
       fd.append("image", data.imageFile);
     }
@@ -86,6 +124,9 @@ export default function AdsPage() {
             isActive: data.active !== false,
             validFrom: data.validFrom?.trim() ?? "",
             validUntil: data.validUntil?.trim() ?? "",
+            scope: data.scope,
+            targetStates: data.targetStates ?? [],
+            targetCities: data.targetCities ?? [],
           },
           true,
         );
@@ -162,6 +203,9 @@ export default function AdsPage() {
                     Link
                   </th>
                   <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
+                    Escopo
+                  </th>
+                  <th className="px-4 py-3 font-semibold text-[var(--dash-text)]">
                     Ativo
                   </th>
                   <th className="px-4 py-3 text-right font-semibold text-[var(--dash-text)]">
@@ -204,6 +248,9 @@ export default function AdsPage() {
                       ) : (
                         <span className="text-[var(--dash-text-muted)]">—</span>
                       )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <ScopeBadge ad={ad} />
                     </td>
                     <td className="px-4 py-3">
                       <span

@@ -30,6 +30,13 @@ export interface Coupon {
   updatedAt?: string;
 }
 
+export type AdScope = "GLOBAL" | "REGIONAL" | "MUNICIPAL";
+
+export interface AdCityTarget {
+  uf: string;
+  city: string;
+}
+
 export interface Ad {
   id: string;
   name: string;
@@ -38,6 +45,9 @@ export interface Ad {
   active?: boolean;
   validFrom?: string | null;
   validUntil?: string | null;
+  scope?: AdScope;
+  targetStates?: string[];
+  targetCities?: AdCityTarget[];
   createdAt?: string;
   updatedAt?: string;
 }
