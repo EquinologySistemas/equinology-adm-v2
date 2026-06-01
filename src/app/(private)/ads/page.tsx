@@ -74,6 +74,7 @@ export default function AdsPage() {
   function buildAdFormData(data: AdsFormSubmitPayload) {
     const fd = new FormData();
     fd.append("name", data.name);
+    fd.append("description", data.description?.trim() ?? "");
     fd.append("redirectUrl", data.redirectUrl ?? "");
     fd.append("isActive", String(data.active !== false));
     fd.append("validFrom", data.validFrom?.trim() ?? "");
@@ -120,6 +121,7 @@ export default function AdsPage() {
           `${API_ADS}/${editingAd.id}`,
           {
             name: data.name,
+            description: data.description?.trim() ?? "",
             redirectUrl: data.redirectUrl || undefined,
             isActive: data.active !== false,
             validFrom: data.validFrom?.trim() ?? "",

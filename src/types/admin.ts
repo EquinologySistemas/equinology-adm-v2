@@ -40,6 +40,7 @@ export interface AdCityTarget {
 export interface Ad {
   id: string;
   name: string;
+  description?: string | null;
   redirectUrl: string;
   imageUrl: string;
   active?: boolean;

@@ -11,6 +11,7 @@ import { LocationTargeting } from "./LocationTargeting";
 const adSchema = z
   .object({
     name: z.string().min(1, "Nome é obrigatório"),
+    description: z.string().max(600, "Máximo de 600 caracteres").optional(),
     redirectUrl: z.string().url("URL inválida").or(z.literal("")),
     active: z.boolean().optional(),
     validFrom: z.string().optional(),
@@ -100,6 +101,7 @@ export function AdsForm({ initialData, onSubmit, onCancel }: AdsFormProps) {
     resolver: zodResolver(adSchema),
     defaultValues: {
       name: initialData?.name ?? "",
+      description: initialData?.description ?? "",
       redirectUrl: initialData?.redirectUrl ?? "",
       active: initialData?.active !== false,
       validFrom: formatDateInput(initialData?.validFrom),
@@ -173,6 +175,22 @@ export function AdsForm({ initialData, onSubmit, onCancel }: AdsFormProps) {
         />
         {errors.name && (
           <p className="mt-1 text-xs text-red-600">{errors.name.message}</p>
+        )}
+      </div>
+      <div>
+        <label className="mb-1 block text-sm font-medium text-[var(--dash-text)]">
+          Descrição
+        </label>
+        <textarea
+          {...register("description")}
+          rows={4}
+          className="w-full resize-y rounded-xl border border-[var(--dash-border)] px-4 py-2.5 text-sm focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
+          placeholder="Texto exibido no detalhe do patrocinador (produtos, serviços, diferenciais...)."
+        />
+        {errors.description && (
+          <p className="mt-1 text-xs text-red-600">
+            {errors.description.message}
+          </p>
         )}
       </div>
       <div>
