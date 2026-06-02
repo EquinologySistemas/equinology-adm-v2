@@ -152,12 +152,12 @@ export function AdsForm({ initialData, onSubmit, onCancel }: AdsFormProps) {
 
   return (
     <form
-      onSubmit={handleSubmit((data) => {
+      onSubmit={handleSubmit(async (data) => {
         if (!isEdit && !imageFile) {
           setError("root", { message: "Selecione uma imagem para o anúncio." });
           return;
         }
-        void onSubmit({ ...data, imageFile });
+        await onSubmit({ ...data, imageFile });
       })}
       className="space-y-4"
     >

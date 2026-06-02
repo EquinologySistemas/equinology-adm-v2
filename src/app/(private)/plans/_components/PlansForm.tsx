@@ -77,7 +77,7 @@ export function PlansForm({
     defaultValues: defaults,
   });
 
-  function handleFormSubmit(data: PlanFormData) {
+  async function handleFormSubmit(data: PlanFormData) {
     const payload: Partial<Plan> = {
       name: data.name.trim(),
       description: data.description?.trim() || undefined,
@@ -97,7 +97,7 @@ export function PlansForm({
     if (data.pricePixCents != null && !Number.isNaN(pixCents)) {
       payload.pricePix = pixCents / 100;
     }
-    onSubmit(payload);
+    await onSubmit(payload);
   }
 
   return (
