@@ -44,7 +44,6 @@ interface ProviderProps {
 export const ApiContextProvider = ({ children }: ProviderProps) => {
   const cookies = useCookies();
   const tokenCookieName = getTokenCookieName();
-  const token = cookies.get(tokenCookieName);
 
   const api = axios.create({
     baseURL,
@@ -53,20 +52,30 @@ export const ApiContextProvider = ({ children }: ProviderProps) => {
   api.interceptors.response.use(
     (response) => response,
     (error) => {
-      if (error.response?.status === 401) {
+      const requestUrl: string = error.config?.url ?? "";
+      // Não sequestrar o 401 da própria tela de login: deixe o formulário
+      // exibir a mensagem de erro em vez de recarregar a página.
+      const isSigninRequest = requestUrl.includes("/admin/auth/signin");
+      if (
+        error.response?.status === 401 &&
+        !isSigninRequest &&
+        typeof window !== "undefined" &&
+        window.location.pathname !== LOGIN_PATH
+      ) {
         cookies.remove(tokenCookieName);
-        if (typeof window !== "undefined") {
-          window.location.href = LOGIN_PATH;
-        }
+        window.location.href = LOGIN_PATH;
       }
       return Promise.reject(error);
     },
   );
 
   function config(auth: boolean) {
+    // Lê o token na hora da chamada (não no render do provider), para evitar
+    // usar um valor desatualizado logo após o login.
+    const currentToken = cookies.get(tokenCookieName);
     return {
       headers: {
-        Authorization: auth ? `Bearer ${token}` : "",
+        Authorization: auth ? `Bearer ${currentToken}` : "",
         "ngrok-skip-browser-warning": "any",
       },
     };
@@ -82,8 +91,10 @@ export const ApiContextProvider = ({ children }: ProviderProps) => {
         };
       })
       .catch((err) => {
-        const message = err.response.data;
-        const status = err.response.status;
+        // err.response é undefined em erro de rede (ex.: backend/túnel fora do ar).
+        const status = err.response?.status ?? 0;
+        const message =
+          err.response?.data ?? "Não foi possível conectar ao servidor.";
         return { status, body: message };
       });
 
