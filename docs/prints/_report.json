@@ -1,0 +1,56 @@
+[
+  {
+    "name": "01-dashboard",
+    "url": "/",
+    "finalUrl": "http://localhost:3015/",
+    "status": 200
+  },
+  {
+    "name": "02-empresas",
+    "url": "/companies",
+    "finalUrl": "http://localhost:3015/companies",
+    "status": 200
+  },
+  {
+    "name": "03-planos",
+    "url": "/plans",
+    "finalUrl": "http://localhost:3015/plans",
+    "status": 200
+  },
+  {
+    "name": "04-assinaturas",
+    "url": "/subscriptions",
+    "finalUrl": "http://localhost:3015/subscriptions",
+    "status": 200
+  },
+  {
+    "name": "05-cupons",
+    "url": "/coupons",
+    "finalUrl": "http://localhost:3015/coupons",
+    "status": 200
+  },
+  {
+    "name": "06-anuncios",
+    "url": "/ads",
+    "finalUrl": "http://localhost:3015/ads",
+    "status": 200
+  },
+  {
+    "name": "07-administradores",
+    "url": "/admins",
+    "finalUrl": "http://localhost:3015/admins",
+    "status": 200
+  },
+  {
+    "name": "08-usuarios",
+    "url": "/users",
+    "finalUrl": "http://localhost:3015/users",
+    "status": 200
+  },
+  {
+    "name": "09-financeiro",
+    "url": "/financial",
+    "finalUrl": "http://localhost:3015/financial",
+    "status": 200
+  }
+]
