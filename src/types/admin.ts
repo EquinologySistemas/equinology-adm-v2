@@ -53,6 +53,35 @@ export interface Ad {
   updatedAt?: string;
 }
 
+export type TutorialType = "VIDEO" | "PDF";
+
+export interface TutorialChapter {
+  title: string;
+  description?: string | null;
+  timecode?: string | null;
+  sortOrder?: number;
+}
+
+export interface Tutorial {
+  id: string;
+  type: TutorialType;
+  title: string;
+  description?: string | null;
+  /** URL do conteúdo principal (vídeo ou PDF) */
+  mediaUrl: string;
+  videoUrl?: string | null;
+  fileUrl?: string | null;
+  posterUrl?: string | null;
+  captionsUrl?: string | null;
+  durationLabel?: string | null;
+  active?: boolean;
+  isActive?: boolean;
+  featured?: boolean;
+  sortOrder?: number;
+  chapters?: TutorialChapter[];
+  createdAt?: string;
+}
+
 export interface User {
   id: string;
   name: string;
