@@ -3,7 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { BRAZIL_STATES, fetchCitiesByUF } from "@/lib/locations";
 import type { AdCityTarget, AdScope } from "@/types/admin";
-import { ChevronDown, ChevronRight, Globe2, MapPin, MapPinned } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  Globe2,
+  MapPin,
+  MapPinned,
+} from "lucide-react";
 
 interface LocationTargetingProps {
   scope: AdScope;
@@ -16,7 +22,12 @@ interface LocationTargetingProps {
   citiesError?: string;
 }
 
-const SCOPE_OPTIONS: Array<{ value: AdScope; label: string; description: string; icon: typeof Globe2 }> = [
+const SCOPE_OPTIONS: Array<{
+  value: AdScope;
+  label: string;
+  description: string;
+  icon: typeof Globe2;
+}> = [
   {
     value: "GLOBAL",
     label: "Global",
@@ -48,11 +59,14 @@ export function LocationTargeting({
   citiesError,
 }: LocationTargetingProps) {
   return (
-    <div className="rounded-xl border border-[var(--dash-border)] bg-[var(--dash-bg)]/40 p-4 space-y-4">
+    <div className="space-y-4 rounded-xl border border-[var(--dash-border)] bg-[var(--dash-bg)]/40 p-4">
       <div>
-        <p className="text-sm font-semibold text-[var(--dash-text)]">Escopo de exibição</p>
+        <p className="text-sm font-semibold text-[var(--dash-text)]">
+          Escopo de exibição
+        </p>
         <p className="text-xs text-[var(--dash-text-muted)]">
-          Define quem verá o anúncio com base na localização da empresa do usuário.
+          Define quem verá o anúncio com base na localização da empresa do
+          usuário.
         </p>
       </div>
 
@@ -75,7 +89,9 @@ export function LocationTargeting({
                 <Icon className="h-4 w-4" />
                 {opt.label}
               </div>
-              <p className="text-xs text-[var(--dash-text-muted)]">{opt.description}</p>
+              <p className="text-xs text-[var(--dash-text-muted)]">
+                {opt.description}
+              </p>
             </button>
           );
         })}
@@ -119,13 +135,23 @@ function StatesSelector({ selected, onChange, error }: StatesSelectorProps) {
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
-        <p className="text-sm font-medium text-[var(--dash-text)]">Estados alvo</p>
+        <p className="text-sm font-medium text-[var(--dash-text)]">
+          Estados alvo
+        </p>
         <button
           type="button"
-          onClick={() => onChange(selected.length === BRAZIL_STATES.length ? [] : BRAZIL_STATES.map((s) => s.uf))}
+          onClick={() =>
+            onChange(
+              selected.length === BRAZIL_STATES.length
+                ? []
+                : BRAZIL_STATES.map((s) => s.uf),
+            )
+          }
           className="text-xs text-[var(--dash-accent)] hover:underline"
         >
-          {selected.length === BRAZIL_STATES.length ? "Limpar" : "Selecionar todos"}
+          {selected.length === BRAZIL_STATES.length
+            ? "Limpar"
+            : "Selecionar todos"}
         </button>
       </div>
       <div className="grid max-h-56 grid-cols-2 gap-1 overflow-y-auto rounded-lg border border-[var(--dash-border)] bg-white p-2 sm:grid-cols-3">
@@ -135,7 +161,9 @@ function StatesSelector({ selected, onChange, error }: StatesSelectorProps) {
             <label
               key={s.uf}
               className={`flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors ${
-                isSelected ? "bg-[var(--dash-accent-soft)]" : "hover:bg-[var(--dash-bg)]/60"
+                isSelected
+                  ? "bg-[var(--dash-accent-soft)]"
+                  : "hover:bg-[var(--dash-bg)]/60"
               }`}
             >
               <input
@@ -144,7 +172,9 @@ function StatesSelector({ selected, onChange, error }: StatesSelectorProps) {
                 onChange={() => toggle(s.uf)}
                 className="h-4 w-4 rounded border-[var(--dash-border)] text-[var(--dash-accent)] focus:ring-[var(--dash-accent)]"
               />
-              <span className="font-mono text-xs text-[var(--dash-text-muted)]">{s.uf}</span>
+              <span className="text-xs text-[var(--dash-text-muted)]">
+                {s.uf}
+              </span>
               <span className="truncate text-[var(--dash-text)]">{s.name}</span>
             </label>
           );
@@ -228,7 +258,9 @@ function CitiesSelector({ selected, onChange, error }: CitiesSelectorProps) {
 
   return (
     <div>
-      <p className="mb-2 text-sm font-medium text-[var(--dash-text)]">Cidades alvo</p>
+      <p className="mb-2 text-sm font-medium text-[var(--dash-text)]">
+        Cidades alvo
+      </p>
       <div className="space-y-2 rounded-lg border border-[var(--dash-border)] bg-white p-2">
         {BRAZIL_STATES.map((s) => {
           const open = openUfs.has(s.uf);
@@ -236,10 +268,15 @@ function CitiesSelector({ selected, onChange, error }: CitiesSelectorProps) {
           const search = searchByUf[s.uf] ?? "";
           const cities = cityCache[s.uf] ?? [];
           const filtered = search
-            ? cities.filter((c) => c.toLowerCase().includes(search.toLowerCase()))
+            ? cities.filter((c) =>
+                c.toLowerCase().includes(search.toLowerCase()),
+              )
             : cities;
           return (
-            <div key={s.uf} className="rounded-md border border-[var(--dash-border)]/60">
+            <div
+              key={s.uf}
+              className="rounded-md border border-[var(--dash-border)]/60"
+            >
               <button
                 type="button"
                 onClick={() => toggleUf(s.uf)}
@@ -251,7 +288,9 @@ function CitiesSelector({ selected, onChange, error }: CitiesSelectorProps) {
                   ) : (
                     <ChevronRight className="h-4 w-4 text-[var(--dash-text-muted)]" />
                   )}
-                  <span className="font-mono text-xs text-[var(--dash-text-muted)]">{s.uf}</span>
+                  <span className="text-xs text-[var(--dash-text-muted)]">
+                    {s.uf}
+                  </span>
                   <span className="text-[var(--dash-text)]">{s.name}</span>
                 </span>
                 {selectedCount > 0 && (
@@ -297,14 +336,18 @@ function CitiesSelector({ selected, onChange, error }: CitiesSelectorProps) {
                         type="text"
                         value={search}
                         onChange={(e) =>
-                          setSearchByUf((p) => ({ ...p, [s.uf]: e.target.value }))
+                          setSearchByUf((p) => ({
+                            ...p,
+                            [s.uf]: e.target.value,
+                          }))
                         }
                         placeholder={`Buscar cidade em ${s.name}…`}
-                        className="mb-2 w-full rounded-md border border-[var(--dash-border)] px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--dash-accent)]/30"
+                        className="mb-2 w-full rounded-md border border-[var(--dash-border)] px-2 py-1 text-xs focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
                       />
                       <div className="max-h-48 overflow-y-auto">
                         {filtered.map((city) => {
-                          const isSelected = selectedByUf.get(s.uf)?.has(city) ?? false;
+                          const isSelected =
+                            selectedByUf.get(s.uf)?.has(city) ?? false;
                           return (
                             <label
                               key={`${s.uf}-${city}`}
@@ -320,7 +363,9 @@ function CitiesSelector({ selected, onChange, error }: CitiesSelectorProps) {
                                 onChange={() => toggleCity(s.uf, city)}
                                 className="h-3.5 w-3.5 rounded border-[var(--dash-border)] text-[var(--dash-accent)] focus:ring-[var(--dash-accent)]"
                               />
-                              <span className="text-[var(--dash-text)]">{city}</span>
+                              <span className="text-[var(--dash-text)]">
+                                {city}
+                              </span>
                             </label>
                           );
                         })}
@@ -340,7 +385,8 @@ function CitiesSelector({ selected, onChange, error }: CitiesSelectorProps) {
       </div>
       {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
       <p className="mt-1 text-xs text-[var(--dash-text-muted)]">
-        {selected.length} cidade(s) selecionada(s) em {selectedByUf.size} estado(s).
+        {selected.length} cidade(s) selecionada(s) em {selectedByUf.size}{" "}
+        estado(s).
       </p>
     </div>
   );

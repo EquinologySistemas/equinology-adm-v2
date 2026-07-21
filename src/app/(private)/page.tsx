@@ -7,7 +7,11 @@ import {
   getFinancialSummary,
   getSubscriptionTransactions,
 } from "@/lib/financial-api";
-import type { FinancialSummary, Subscription, SubscriptionTransaction } from "@/types/admin";
+import type {
+  FinancialSummary,
+  Subscription,
+  SubscriptionTransaction,
+} from "@/types/admin";
 import {
   Users,
   CreditCard,
@@ -195,8 +199,8 @@ export default function DashboardPage() {
           usersRes.status === 200 ? (usersRes.body?.users ?? []) : [];
         const companiesRaw =
           companiesRes.status === 200
-            ? companiesRes.body?.companies ??
-              (Array.isArray(companiesRes.body) ? companiesRes.body : [])
+            ? (companiesRes.body?.companies ??
+              (Array.isArray(companiesRes.body) ? companiesRes.body : []))
             : [];
         const plans =
           plansRes.status === 200
@@ -414,7 +418,7 @@ export default function DashboardPage() {
               href="/financial"
               className="inline-flex items-center gap-1 text-sm font-medium text-[var(--dash-accent)] hover:underline"
             >
-              Ver todas
+              Ver Detalhes
               <ArrowRight className="h-4 w-4" aria-hidden />
             </Link>
           </div>
@@ -426,8 +430,7 @@ export default function DashboardPage() {
             <ul className="mt-3 divide-y divide-[var(--dash-border)]">
               {recentTransactions.map((t) => {
                 const statusUpper = (t.status ?? "").toUpperCase();
-                const label =
-                  txStatusLabels[statusUpper] ?? t.status ?? "—";
+                const label = txStatusLabels[statusUpper] ?? t.status ?? "—";
                 return (
                   <li
                     key={t.id}
@@ -463,7 +466,7 @@ export default function DashboardPage() {
               href="/subscriptions"
               className="inline-flex items-center gap-1 text-sm font-medium text-[var(--dash-accent)] hover:underline"
             >
-              Ver todas
+              Ver Detalhes
               <ArrowRight className="h-4 w-4" aria-hidden />
             </Link>
           </div>
