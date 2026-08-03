@@ -172,6 +172,17 @@ export interface FinancialSummary {
   revenuePreviousMonth: number;
   activeSubscriptions: number;
   trialSubscriptions: number;
+  /**
+   * Pagamentos liquidados que o provedor devolveu sem data de liquidação.
+   * Não entram na receita do mês — o painel avisa em vez de chutar o mês.
+   */
+  settledWithoutDate: number;
+  /**
+   * Assinaturas que o provedor de pagamento não respondeu na consulta. Os
+   * pagamentos delas ficaram fora da receita: com este número maior que zero,
+   * o total mostrado está incompleto.
+   */
+  signaturesNotRead: number;
 }
 
 export interface SubscriptionTransaction {

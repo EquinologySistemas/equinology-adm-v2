@@ -22,7 +22,7 @@ export interface GetSubscriptionTransactionsResponse {
 export async function getFinancialSummary(
   GetAPI: (
     path: string,
-    showError?: boolean,
+    showError: boolean,
   ) => Promise<{
     status: number;
     body?: unknown;
@@ -38,7 +38,7 @@ export async function getFinancialSummary(
 export async function getSubscriptionTransactions(
   GetAPI: (
     path: string,
-    showError?: boolean,
+    showError: boolean,
   ) => Promise<{
     status: number;
     body?: unknown;
@@ -88,6 +88,10 @@ function financialSummaryFromApi(
       typeof raw.activeSubscriptions === "number" ? raw.activeSubscriptions : 0,
     trialSubscriptions:
       typeof raw.trialSubscriptions === "number" ? raw.trialSubscriptions : 0,
+    settledWithoutDate:
+      typeof raw.settledWithoutDate === "number" ? raw.settledWithoutDate : 0,
+    signaturesNotRead:
+      typeof raw.signaturesNotRead === "number" ? raw.signaturesNotRead : 0,
   };
 }
 
