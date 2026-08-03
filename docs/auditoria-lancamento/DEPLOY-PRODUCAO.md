@@ -1,44 +1,60 @@
-# Deploy em produção — o que precisa acontecer, e em que ordem
+# Deploy em produção — checagem feita antes de subir
 
-Escrito antes do lançamento, a partir da revisão do SQL real. Nenhuma das
-migrations abaixo rodou em produção ainda.
+Revisão do SQL real e do impacto no front já publicado. Atualizado depois das
+quatro levas de correção e do trabalho de pagamento.
 
-## Ordem obrigatória
+## Resumo
 
-**Migrar o banco primeiro, subir a aplicação depois.** Se subir invertido, a API
-pede colunas que ainda não existem e quebra na primeira requisição.
+**Vai quebrar?** Não, se você seguir a ordem e rodar as duas consultas de
+pré-checagem abaixo. Uma delas pode **abortar a migration**; a outra muda o que
+aparece na tela.
 
+**Precisa de portabilidade de dados?** Não. Nenhuma migration move, converte ou
+apaga dado. São 6 migrations, todas aditivas ou relaxando restrição:
+
+| Migration | O que faz | Risco |
+|---|---|---|
+| `receptor_diagnosis_expectancy_date_nullable` | coluna aceita vazio | nenhum |
+| `soft_delete_stud_farm_animal_appointment` | 3 colunas novas + `companyId` em `stud_farms` **com backfill** | ver checagem 2 |
+| `segunda_leva` | 5 tabelas novas + 2 colunas novas | nenhum |
+| `add_used_at_to_recover_password_code` | 1 coluna nova | nenhum |
+| `unique_bank_payment_id` | 2 índices **UNIQUE** | ver checagem 1 |
+| `add_stock_transfer_audit` | 1 tabela nova | nenhum |
+
+Verificado: **zero** `DROP TABLE`, `DROP COLUMN`, `DELETE`, `TRUNCATE` ou
+`SET NOT NULL` nas seis.
+
+A branch `fix/lancamento` **mescla na main sem conflito** (7 commits).
+
+---
+
+## Antes de rodar o migrate: duas consultas
+
+### 1. Duplicatas que fazem a migration ABORTAR
+
+`unique_bank_payment_id` cria índice único. Se produção tiver dois registros com
+o mesmo `bankPaymentId`, o `CREATE UNIQUE INDEX` **falha e o deploy para no
+meio**.
+
+```sql
+SELECT 'invoices' tabela, "bankPaymentId", COUNT(*) FROM invoices
+ WHERE "bankPaymentId" IS NOT NULL GROUP BY 2 HAVING COUNT(*) > 1
+UNION ALL
+SELECT 'transactions', "bankPaymentId", COUNT(*) FROM transactions
+ WHERE "bankPaymentId" IS NOT NULL GROUP BY 2 HAVING COUNT(*) > 1;
 ```
-1. backup do banco de produção
-2. npx prisma migrate deploy
-3. deploy da API
-4. deploy do web / ADM / app
-```
 
-## As 3 migrations pendentes
+**Zero linhas = pode seguir.** Se vier alguma, resolva antes: são duas cobranças
+apontando para o mesmo id do gateway, o que já é um problema de conciliação
+independente do deploy.
 
-Nenhuma apaga dado. Todas são aditivas ou relaxam restrição — não há `DROP
-TABLE`, `DROP COLUMN` nem `DELETE`.
+(No banco local: zero.)
 
-### `20260802163632_receptor_diagnosis_expectancy_date_nullable`
-Uma linha: `expectancyDate` do diagnóstico da receptora passa a aceitar vazio.
-Relaxa restrição, não rejeita dado existente. Risco: nenhum.
+### 2. Propriedades que vão sumir das telas
 
-### `20260802184137_soft_delete_stud_farm_animal_appointment`
-Colunas de exclusão lógica em `animals`, `appointments` e `stud_farms`, mais a
-coluna `companyId` em `stud_farms` com **backfill**.
-
-**Atenção — este é o único ponto que exige conferência antes.** O backfill
-deriva a empresa dona da propriedade a partir dos vínculos existentes (animais,
-atendimentos, cliente). No banco local, 35 de 42 propriedades ganharam dono e
-**7 ficaram sem**, por não terem nenhum vínculo do qual derivar.
-
-Consequência: propriedade sem dono derivável **fica invisível para todo mundo**.
-São exatamente as que hoje vazam para todas as clínicas, então o comportamento
-novo é o correto — mas se houver propriedades assim em produção, elas somem da
-tela e alguém vai perguntar por quê.
-
-Rode isto **antes** do deploy para saber o tamanho:
+`soft_delete_stud_farm_animal_appointment` dá dono próprio às propriedades,
+derivando de cliente, animal ou atendimento. As que não têm **nenhum** vínculo
+ficam sem dono e **deixam de aparecer para qualquer clínica**.
 
 ```sql
 SELECT COUNT(*) FROM stud_farms sf
@@ -48,35 +64,68 @@ WHERE sf."clientId" IS NULL
   AND NOT EXISTS (SELECT 1 FROM client_stud_farms cs WHERE cs."studFarmId" = sf.id);
 ```
 
-Se o número for zero, siga sem preocupação. Se não for, decida antes: atribuir
-manualmente a empresa correta, ou aceitar que sumam.
+Esse é o comportamento **correto** — hoje essas propriedades vazam para todas as
+clínicas, que é o furo que a migration fecha. Mas se o número for alto, alguém
+vai perguntar por que sumiram. Decida antes: atribuir a empresa na mão ou
+aceitar.
 
-### `20260802192218_segunda_leva`
-5 tabelas novas de reprodução (as seções da Matriz e o Pós-parto da Receptora),
-mais as colunas de exclusão lógica em `users` e `products`. Tabelas novas nascem
-vazias; as colunas são nulas. Risco: nenhum.
+(No banco local: 8 de 42.)
 
-## Variáveis de ambiente
+---
 
-Nenhuma variável nova foi introduzida. O `.env` de produção continua válido.
+## A ordem
 
-## O que NÃO está resolvido e afeta o deploy
+```
+1. Backup do banco de produção
+2. npx prisma migrate deploy
+3. Deploy da API
+4. Deploy do web / ADM / app
+```
 
-**Segredos no histórico do Git.** `JWT_SECRET`, senha do RDS de produção, chaves
-do R2, SMTP e o token do webhook Asaas estão num commit do repositório. O
-arquivo foi removido do índice, mas o histórico permanece e já está no remoto.
-Enquanto o `JWT_SECRET` não for rotacionado, a revogação de sessão implementada
-hoje vale menos do que deveria: quem tiver a chave assina um token novo.
+**Nunca inverta 2 e 3.** A API nova espera colunas que só existem depois da
+migration; subindo antes, ela quebra na primeira requisição.
+
+Entre 3 e 4 há uma janela em que o **front antigo** conversa com a **API nova**.
+Verifiquei e é seguro: as mudanças são aditivas.
+
+- `POST` passou a devolver corpo — o front antigo ignora, sem efeito
+- Exclusão lógica — o front antigo não tem botão de excluir
+- `includeDeleted` — parâmetro novo e opcional
+- Pipe de uuid — **conferido**: todas as colunas `id` do banco são uuid; as de
+  texto são `code`, que o pipe exclui de propósito
+- Senha mínima de 8 caracteres — vale só para senha nova; **quem já tem senha
+  curta continua entrando** (testado)
+
+---
+
+## Depois de subir, olhe estes dois
+
+**Latência.** A revogação de sessão faz uma consulta por requisição (busca por
+chave primária, uma coluna). É barato e foi decisão consciente — cache com TTL
+reintroduziria, em escala menor, o bug que estávamos corrigindo. Mas é uma
+query a mais em toda rota autenticada: vale acompanhar o tempo de resposta nas
+primeiras horas.
+
+**Sessões.** Se o `JWT_SECRET` for rotacionado junto (não é obrigatório para o
+deploy), **todos os usuários são deslogados**. Se não rotacionar, ninguém é
+afetado.
+
+---
+
+## O que continua em aberto
+
+**Segredos no histórico do Git.** `JWT_SECRET`, senha do RDS, chaves do R2, SMTP
+e token do webhook estão num commit já enviado ao remoto. O arquivo saiu do
+índice; o histórico não. Decisão do dono foi não rotacionar.
+
+A consequência técnica, registrada sem insistir: enquanto essa chave for
+conhecida, a revogação de sessão vale menos do que deveria — quem a tiver assina
+um token novo e passa por todas as checagens.
 
 **Rotas de demonstração públicas no web:** `/odontograma-novo`,
-`/odontograma-novo-v2`, `/odontograma-pdf-check` e `/logo-pdf-check`. Ficam
-acessíveis sem login.
+`/odontograma-novo-v2`, `/odontograma-pdf-check`, `/logo-pdf-check`. Acessíveis
+sem login.
 
-**O bucket de dinheiro/Asaas** — 48 achados, 15 bloqueadores — segue intocado
-por decisão do dono. Ver `DINHEIRO-E-ASAAS.md`. Vários só se manifestam quando
-entra dinheiro real: reembolso que não cancela a recorrência, troca de plano que
-deixa o cliente sem cobrança, e o trial que vira assinatura paga sem pagamento.
-
-**Os três fronts nunca foram testados em navegador.** Toda a validação até aqui
-foi por chamada de API. Botões e telas criados hoje — exclusão e filtro de
-excluídos — não foram clicados por ninguém.
+**Nenhum dos três fronts foi testado em navegador.** Toda a validação foi por
+chamada de API. Os botões de exclusão e o filtro de excluídos criados agora
+nunca foram clicados.
