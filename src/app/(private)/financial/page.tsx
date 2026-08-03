@@ -3,41 +3,46 @@
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { Pagination } from "@/components/ui/Pagination";
 import { useApiContext } from "@/context/ApiContext";
+import { formatDate } from "@/lib/date";
+import {
+  getFinancialSummary,
+  getSubscriptionTransactions,
+} from "@/lib/financial-api";
 import type { FinancialSummary, SubscriptionTransaction } from "@/types/admin";
 import { Search, TrendingDown, TrendingUp } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { TransactionDetailModal } from "./_components/TransactionDetailModal";
 
-const API_FINANCIAL_SUMMARY = "/admin/financial/summary";
-const API_FINANCIAL_TRANSACTIONS = "/admin/financial/transactions";
-const PAGE_SIZE = 20;
+const PAGE_SIZE_OPTIONS = [20, 50, 100];
 
 const statusLabels: Record<string, string> = {
   PAID: "Pago",
   RECEIVED: "Recebido",
+  CONFIRMED: "Confirmado",
+  RECEIVED_IN_CASH: "Recebido em dinheiro",
   PENDING: "Pendente",
   OVERDUE: "Vencido",
   failed: "Falhou",
   refunded: "Reembolsado",
+  REFUNDED: "Reembolsado",
   CANCELLED: "Cancelado",
 };
 
-function normalizeTransaction(
-  row: Record<string, unknown>,
-): SubscriptionTransaction {
-  return {
-    id: String(row.id ?? ""),
-    signatureId: String(row.signatureId ?? ""),
-    companyName: String(row.companyName ?? ""),
-    planName: String(row.planName ?? ""),
-    value: typeof row.value === "number" ? row.value : 0,
-    dueDate: String(row.dueDate ?? ""),
-    paymentDate: row.paymentDate ? String(row.paymentDate) : undefined,
-    status: String(row.status ?? "PENDING"),
-    paymentMethod: String(row.paymentMethod ?? ""),
-    createdAt: String(row.createdAt ?? ""),
-  };
+const statusFilterOptions = [
+  { value: "", label: "Todos os status" },
+  { value: "RECEIVED", label: "Recebido" },
+  { value: "CONFIRMED", label: "Confirmado" },
+  { value: "PENDING", label: "Pendente" },
+  { value: "OVERDUE", label: "Vencido" },
+  { value: "REFUNDED", label: "Reembolsado" },
+];
+
+function firstDayOfCurrentMonth() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), 1)
+    .toISOString()
+    .slice(0, 10);
 }
 
 export default function FinancialPage() {
@@ -45,53 +50,43 @@ export default function FinancialPage() {
   const [transactions, setTransactions] = useState<SubscriptionTransaction[]>(
     [],
   );
+  const [total, setTotal] = useState(0);
   const [summary, setSummary] = useState<FinancialSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE_OPTIONS[0]);
+  const [startDate, setStartDate] = useState(firstDayOfCurrentMonth());
+  const [endDate, setEndDate] = useState("");
+  const [status, setStatus] = useState("");
   const [detailTransaction, setDetailTransaction] =
     useState<SubscriptionTransaction | null>(null);
 
-  async function load() {
+  // A listagem é paginada e filtrada NO SERVIDOR. Antes a tela pedia a rota
+  // sem nenhum parâmetro, recebia as 10 primeiras (default da API) e filtrava
+  // só essas 10 no navegador — era impossível auditar o que foi recebido.
+  const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [summaryRes, transactionsRes] = await Promise.all([
-        GetAPI(API_FINANCIAL_SUMMARY, true),
-        GetAPI(API_FINANCIAL_TRANSACTIONS, true),
+      const [summaryResult, transactionsResult] = await Promise.all([
+        getFinancialSummary(GetAPI),
+        getSubscriptionTransactions(GetAPI, {
+          page,
+          pageSize,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
+          status: status || undefined,
+        }),
       ]);
 
-      if (summaryRes.status === 200 && summaryRes.body) {
-        setSummary({
-          revenueMonth:
-            typeof summaryRes.body.revenueMonth === "number"
-              ? summaryRes.body.revenueMonth
-              : 0,
-          revenuePreviousMonth:
-            typeof summaryRes.body.revenuePreviousMonth === "number"
-              ? summaryRes.body.revenuePreviousMonth
-              : 0,
-          activeSubscriptions:
-            typeof summaryRes.body.activeSubscriptions === "number"
-              ? summaryRes.body.activeSubscriptions
-              : 0,
-          trialSubscriptions:
-            typeof summaryRes.body.trialSubscriptions === "number"
-              ? summaryRes.body.trialSubscriptions
-              : 0,
-        });
-      }
+      if (summaryResult) setSummary(summaryResult);
 
-      if (transactionsRes.status === 200) {
-        const data =
-          transactionsRes.body?.transactions ??
-          transactionsRes.body?.data ??
-          [];
-        const list = Array.isArray(data) ? data : [];
-        setTransactions(
-          list.map((row: Record<string, unknown>) => normalizeTransaction(row)),
-        );
+      if (transactionsResult) {
+        setTransactions(transactionsResult.transactions);
+        setTotal(transactionsResult.total);
       } else {
         setTransactions([]);
+        setTotal(0);
         toast.error("Erro ao carregar transações.");
       }
     } catch (error) {
@@ -100,13 +95,19 @@ export default function FinancialPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [GetAPI, page, pageSize, startDate, endDate, status]);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
-  const filtered = useMemo(() => {
+  useEffect(() => {
+    setPage(1);
+  }, [startDate, endDate, status, pageSize]);
+
+  // Busca textual: a API não tem busca por texto, então ela refina apenas a
+  // página já carregada. O rótulo do campo diz isso para não enganar.
+  const paginatedData = useMemo(() => {
     if (!search.trim()) return transactions;
     const q = search.trim().toLowerCase();
     return transactions.filter(
@@ -118,16 +119,6 @@ export default function FinancialPage() {
     );
   }, [transactions, search]);
 
-  const totalFiltered = filtered.length;
-  const paginatedData = useMemo(
-    () => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
-    [filtered, page],
-  );
-
-  useEffect(() => {
-    setPage(1);
-  }, [search]);
-
   const columns: ColumnDef<SubscriptionTransaction>[] = useMemo(
     () => [
       {
@@ -135,14 +126,7 @@ export default function FinancialPage() {
         label: "Data de Vencimento",
         sortable: true,
         getValue: (t) => t.dueDate ?? "",
-        render: (t) =>
-          t.dueDate
-            ? new Date(t.dueDate).toLocaleDateString("pt-BR", {
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric",
-              })
-            : "—",
+        render: (t) => formatDate(t.dueDate),
       },
       {
         key: "companyName",
@@ -174,7 +158,15 @@ export default function FinancialPage() {
         getValue: (t) => t.status.toUpperCase() ?? "PENDING",
         render: (t) => {
           const statusUpper = t.status.toUpperCase();
-          const isPaid = statusUpper === "PAID" || statusUpper === "RECEIVED";
+          // Mesmos estados que a API conta como liquidados em "Recebido no mês"
+          // — CONFIRMED (cartão aprovado) aparecia em cinza, como se não fosse
+          // dinheiro entrado.
+          const isPaid = [
+            "PAID",
+            "RECEIVED",
+            "CONFIRMED",
+            "RECEIVED_IN_CASH",
+          ].includes(statusUpper);
           const isPending = statusUpper === "PENDING";
           const isOverdue = statusUpper === "OVERDUE";
           return (
@@ -205,14 +197,9 @@ export default function FinancialPage() {
         label: "Pago em",
         sortable: true,
         getValue: (t) => t.paymentDate ?? "",
-        render: (t) =>
-          t.paymentDate
-            ? new Date(t.paymentDate).toLocaleDateString("pt-BR", {
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric",
-              })
-            : "—",
+        // Data real de liquidação do provedor. Sem ela, "—": nunca o
+        // vencimento, que é o que a tela mostrava antes.
+        render: (t) => formatDate(t.paymentDate),
       },
     ],
     [],
@@ -233,7 +220,7 @@ export default function FinancialPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div className="rounded-xl border border-[var(--dash-border)] bg-white p-5 shadow-sm">
             <p className="text-sm font-medium text-[var(--dash-text-muted)]">
-              Receita do mês
+              Recebido no mês
             </p>
             <div className="mt-1 flex items-center gap-2">
               <p className="text-2xl font-semibold text-[var(--dash-text)]">
@@ -264,6 +251,10 @@ export default function FinancialPage() {
                 </span>
               )}
             </div>
+            <p className="mt-1 text-xs text-[var(--dash-text-muted)]">
+              Soma dos pagamentos liquidados, pela data de pagamento informada
+              pelo provedor.
+            </p>
             {summary.revenuePreviousMonth > 0 && (
               <p className="mt-1 text-xs text-[var(--dash-text-muted)]">
                 Mês anterior:{" "}
@@ -271,6 +262,19 @@ export default function FinancialPage() {
                   style: "currency",
                   currency: "BRL",
                 }).format(summary.revenuePreviousMonth)}
+              </p>
+            )}
+            {summary.settledWithoutDate > 0 && (
+              <p className="mt-2 rounded-lg bg-yellow-50 px-2 py-1 text-xs text-yellow-800">
+                {summary.settledWithoutDate} pagamento(s) liquidado(s) sem data
+                informada pelo provedor ficaram fora deste total.
+              </p>
+            )}
+            {summary.signaturesNotRead > 0 && (
+              <p className="mt-2 rounded-lg bg-red-50 px-2 py-1 text-xs text-red-800">
+                Total incompleto: {summary.signaturesNotRead} assinatura(s) não
+                puderam ser consultadas no provedor de pagamento agora. Atualize
+                a página em alguns minutos.
               </p>
             )}
           </div>
@@ -293,17 +297,85 @@ export default function FinancialPage() {
         </div>
       )}
 
-      <div className="rounded-xl border border-[var(--dash-border)] bg-white p-4 shadow-sm">
-        <div className="relative min-w-[200px] flex-1">
-          <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--dash-text-muted)]" />
-          <input
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por empresa, plano, status ou forma de pagamento..."
-            className="w-full rounded-xl border border-[var(--dash-border)] bg-white py-2.5 pr-4 pl-9 text-sm text-[var(--dash-text)] placeholder:text-[var(--dash-text-muted)] focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
-          />
+      <div className="space-y-3 rounded-xl border border-[var(--dash-border)] bg-white p-4 shadow-sm">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <label className="flex flex-col gap-1 text-xs font-medium text-[var(--dash-text-muted)]">
+            Período — de
+            <input
+              type="date"
+              value={startDate}
+              max={endDate || undefined}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="rounded-xl border border-[var(--dash-border)] bg-white px-3 py-2 text-sm text-[var(--dash-text)] focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs font-medium text-[var(--dash-text-muted)]">
+            Período — até
+            <input
+              type="date"
+              value={endDate}
+              min={startDate || undefined}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="rounded-xl border border-[var(--dash-border)] bg-white px-3 py-2 text-sm text-[var(--dash-text)] focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs font-medium text-[var(--dash-text-muted)]">
+            Status
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className="rounded-xl border border-[var(--dash-border)] bg-white px-3 py-2 text-sm text-[var(--dash-text)] focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
+            >
+              {statusFilterOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-xs font-medium text-[var(--dash-text-muted)]">
+            Itens por página
+            <select
+              value={pageSize}
+              onChange={(e) => setPageSize(Number(e.target.value))}
+              className="rounded-xl border border-[var(--dash-border)] bg-white px-3 py-2 text-sm text-[var(--dash-text)] focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
+            >
+              {PAGE_SIZE_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative min-w-[200px] flex-1">
+            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--dash-text-muted)]" />
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Refinar os resultados desta página (empresa, plano, status)..."
+              className="w-full rounded-xl border border-[var(--dash-border)] bg-white py-2.5 pr-4 pl-9 text-sm text-[var(--dash-text)] placeholder:text-[var(--dash-text-muted)] focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setStartDate("");
+              setEndDate("");
+              setStatus("");
+              setSearch("");
+            }}
+            className="rounded-xl border border-[var(--dash-border)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--dash-text)] hover:bg-[var(--dash-bg)]"
+          >
+            Limpar filtros
+          </button>
+        </div>
+        <p className="text-xs text-[var(--dash-text-muted)]">
+          O período filtra pela data de pagamento quando ela existe; nas
+          cobranças ainda não pagas, pelo vencimento.
+        </p>
       </div>
 
       <DataTable<SubscriptionTransaction>
@@ -311,7 +383,7 @@ export default function FinancialPage() {
         columns={columns}
         keyExtractor={(t) => t.id}
         loading={loading}
-        emptyMessage="Nenhuma transação encontrada."
+        emptyMessage="Nenhuma transação encontrada para os filtros selecionados."
         renderActions={(t) => (
           <button
             type="button"
@@ -323,11 +395,11 @@ export default function FinancialPage() {
           </button>
         )}
       />
-      {!loading && totalFiltered > 0 && (
+      {!loading && total > 0 && (
         <Pagination
           currentPage={page}
-          totalItems={totalFiltered}
-          pageSize={PAGE_SIZE}
+          totalItems={total}
+          pageSize={pageSize}
           onPageChange={setPage}
         />
       )}

@@ -311,10 +311,10 @@ export default function DashboardPage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div className="rounded-xl border border-[var(--dash-border)] bg-[var(--dash-card)] p-5 shadow-sm">
               <p className="text-sm font-medium text-[var(--dash-text-muted)]">
-                Receita do mês
+                Recebido no mês
               </p>
               <p className="mt-0.5 text-xs text-[var(--dash-text-muted)]">
-                Pagamentos confirmados no mês corrente
+                Pagamentos liquidados, pela data de pagamento do provedor
               </p>
               <div className="mt-1 flex flex-wrap items-center gap-2">
                 <p className="text-2xl font-semibold text-[var(--dash-text)]">
@@ -348,6 +348,20 @@ export default function DashboardPage() {
                     style: "currency",
                     currency: "BRL",
                   }).format(summary.revenuePreviousMonth)}
+                </p>
+              )}
+              {/* Mesmos avisos da tela Financeiro: um total de dinheiro nunca
+                  deve aparecer sozinho quando se sabe que está incompleto. */}
+              {summary.settledWithoutDate > 0 && (
+                <p className="mt-2 rounded-lg bg-yellow-50 px-2 py-1 text-xs text-yellow-800">
+                  {summary.settledWithoutDate} pagamento(s) liquidado(s) sem
+                  data informada pelo provedor ficaram fora deste total.
+                </p>
+              )}
+              {summary.signaturesNotRead > 0 && (
+                <p className="mt-2 rounded-lg bg-red-50 px-2 py-1 text-xs text-red-800">
+                  Total incompleto: {summary.signaturesNotRead} assinatura(s)
+                  não puderam ser consultadas no provedor de pagamento agora.
                 </p>
               )}
             </div>

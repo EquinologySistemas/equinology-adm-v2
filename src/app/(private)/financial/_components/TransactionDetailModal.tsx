@@ -1,11 +1,17 @@
 "use client";
 
 import { Modal } from "@/components/ui/Modal";
+import { formatDate } from "@/lib/date";
 import type { SubscriptionTransaction } from "@/types/admin";
 
 const statusLabels: Record<string, string> = {
   PAID: "Pago",
   RECEIVED: "Recebido",
+  // Estados liquidados que a listagem já reconhece e o modal ignorava,
+  // mostrando o código cru do provedor.
+  CONFIRMED: "Confirmado",
+  RECEIVED_IN_CASH: "Recebido em dinheiro",
+  REFUNDED: "Reembolsado",
   PENDING: "Pendente",
   OVERDUE: "Vencido",
   failed: "Falhou",
@@ -27,7 +33,10 @@ export function TransactionDetailModal({
   if (!transaction) return null;
 
   const statusUpper = transaction.status.toUpperCase();
-  const isPaid = statusUpper === "PAID" || statusUpper === "RECEIVED";
+  // Mesmos estados que a API conta como liquidados em "Recebido no mês".
+  const isPaid = ["PAID", "RECEIVED", "CONFIRMED", "RECEIVED_IN_CASH"].includes(
+    statusUpper,
+  );
   const isPending = statusUpper === "PENDING";
   const isOverdue = statusUpper === "OVERDUE";
 
@@ -84,27 +93,16 @@ export function TransactionDetailModal({
               Data de Vencimento
             </dt>
             <dd className="text-[var(--dash-text)]">
-              {transaction.dueDate
-                ? new Date(transaction.dueDate).toLocaleDateString("pt-BR", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                  })
-                : "—"}
+              {formatDate(transaction.dueDate)}
             </dd>
           </div>
-          {transaction.paymentDate && (
-            <div>
-              <dt className="text-[var(--dash-text-muted)]">Pago em</dt>
-              <dd className="text-[var(--dash-text)]">
-                {new Date(transaction.paymentDate).toLocaleDateString("pt-BR", {
-                  day: "2-digit",
-                  month: "2-digit",
-                  year: "numeric",
-                })}
-              </dd>
-            </div>
-          )}
+          <div>
+            <dt className="text-[var(--dash-text-muted)]">Pago em</dt>
+            <dd className="text-[var(--dash-text)]">
+              {/* Sem data do provedor mostra "—". Nunca o vencimento. */}
+              {formatDate(transaction.paymentDate)}
+            </dd>
+          </div>
           <div>
             <dt className="text-[var(--dash-text-muted)]">
               Forma de pagamento
@@ -116,13 +114,7 @@ export function TransactionDetailModal({
           <div>
             <dt className="text-[var(--dash-text-muted)]">Criado em</dt>
             <dd className="text-[var(--dash-text)]">
-              {transaction.createdAt
-                ? new Date(transaction.createdAt).toLocaleDateString("pt-BR", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                  })
-                : "—"}
+              {formatDate(transaction.createdAt)}
             </dd>
           </div>
         </dl>

@@ -2,6 +2,7 @@
 
 import { Modal } from "@/components/ui/Modal";
 import { useApiContext } from "@/context/ApiContext";
+import { formatDate } from "@/lib/date";
 import { planFromApi } from "@/lib/plans-api";
 import type { Plan, Subscription } from "@/types/admin";
 import { useEffect, useState } from "react";
@@ -67,7 +68,15 @@ export function SubscriptionDetailModal({
   const [showChangePlan, setShowChangePlan] = useState(false);
   const [showUpdate, setShowUpdate] = useState(false);
   const [historyPayments, setHistoryPayments] = useState<
-    { id: string; value: number; dueDate: string; status: string }[] | null
+    | {
+        id: string;
+        value: number;
+        dueDate: string;
+        status: string;
+        /** Data real de liquidação do provedor; null quando ele não informa. */
+        paymentDate?: string | null;
+      }[]
+    | null
   >(null);
   const [editStatus, setEditStatus] = useState<"ACTIVE" | "INACTIVE">(
     "INACTIVE",
@@ -486,9 +495,13 @@ export function SubscriptionDetailModal({
                     className="flex justify-between text-[var(--dash-text)]"
                   >
                     <span>
-                      {p.dueDate
-                        ? new Date(p.dueDate).toLocaleDateString("pt-BR")
-                        : p.id}
+                      {/* Vencimento e liquidação são coisas diferentes: a
+                          lista mostra o vencimento e, quando o provedor
+                          informa, o dia em que o dinheiro entrou. */}
+                      {p.dueDate ? `Venc. ${formatDate(p.dueDate)}` : p.id}
+                      {p.paymentDate
+                        ? ` · Pago em ${formatDate(p.paymentDate)}`
+                        : ""}
                     </span>
                     <span>
                       R$ {Number(p.value).toFixed(2)} —{" "}
