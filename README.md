@@ -1,12 +1,13 @@
-# equinology-adm
+# Equinology — painel administrativo
 
-Painel super-admin (Next.js, App Router) do ecossistema Equinology/VetEquus —
-gestão de tenants, planos, cupons e anúncios.
+Painel da equipe Equinology, em Next.js 16 e React 19.
 
-📚 **A documentação vive no repositório central
-[`equinology-docs`](https://github.com/EquinologySistemas/equinology-docs).**
+## Documentação
 
-- Visão deste sistema: `systems/admin.md`
-- Setup local + variáveis de ambiente: `guides/developer/setup.md`
+- [Guia do painel](https://github.com/EquinologySistemas/equinology-docs/blob/main/systems/admin.md)
+- [Setup local](https://github.com/EquinologySistemas/equinology-docs/blob/main/guides/developer/setup.md)
+- [Publicação](https://github.com/EquinologySistemas/equinology-docs/blob/main/guides/operations/deploy.md)
 
-Início rápido: `yarn && yarn dev`.
+Após configurar `.env.local`, use `yarn install --frozen-lockfile` e `yarn dev -p 3001`. O usuário do painel é um `AdminUser`, distinto do profissional da clínica.
+
+As páginas ficam em `src/app/(private)/`. A integração HTTP fica em `src/context/ApiContext.tsx`.
