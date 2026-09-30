@@ -114,17 +114,16 @@ export function AdminDetailModal({
     }
   }
 
-  async function handleDeactivate() {
+  async function handleSetActive(active: boolean) {
     if (!admin || !canManageAdmins) return;
-    if (!confirm("Tem certeza que deseja desativar este administrador?")) {
+    if (
+      !active &&
+      !confirm("Tem certeza que deseja desativar este administrador?")
+    ) {
       return;
     }
     setIsDeactivating(true);
-    const res = await PatchAPI(
-      `/admin/admins/${admin.id}`,
-      { active: false },
-      true,
-    );
+    const res = await PatchAPI(`/admin/admins/${admin.id}`, { active }, true);
     setIsDeactivating(false);
     if (res.status === 200 || res.status === 201) {
       onSaved();
@@ -137,7 +136,8 @@ export function AdminDetailModal({
             ? "A rota de desativação de administradores não está disponível no backend."
             : typeof res.body === "string"
               ? res.body
-              : (res.body?.message ?? "Erro ao desativar");
+              : (res.body?.message ??
+                (active ? "Erro ao reativar" : "Erro ao desativar"));
       setLoadError(errorMessage);
     }
   }
@@ -220,11 +220,21 @@ export function AdminDetailModal({
               {canManageAdmins && admin.active !== false && (
                 <button
                   type="button"
-                  onClick={handleDeactivate}
+                  onClick={() => handleSetActive(false)}
                   disabled={isDeactivating}
                   className="rounded-xl border border-red-300 bg-white px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-60"
                 >
                   {isDeactivating ? "Desativando…" : "Desativar"}
+                </button>
+              )}
+              {canManageAdmins && admin.active === false && (
+                <button
+                  type="button"
+                  onClick={() => handleSetActive(true)}
+                  disabled={isDeactivating}
+                  className="rounded-xl border border-[var(--dash-border)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--dash-text)] hover:bg-[var(--dash-bg)]/80 disabled:opacity-60"
+                >
+                  {isDeactivating ? "Reativando…" : "Reativar"}
                 </button>
               )}
               <button

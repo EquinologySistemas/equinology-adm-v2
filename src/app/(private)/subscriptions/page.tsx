@@ -3,36 +3,21 @@
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { Pagination } from "@/components/ui/Pagination";
 import { useApiContext } from "@/context/ApiContext";
+import { SubscriptionStatusBadge } from "@/components/ui/SubscriptionStatusBadge";
+import {
+  fetchAllSubscriptions,
+  renewalLabel,
+  subscriptionStatusLabels as statusLabels,
+} from "@/lib/subscriptions-api";
 import type { Subscription } from "@/types/admin";
 import { Plus, Search } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { SubscriptionCreateModal } from "./_components/SubscriptionCreateModal";
 import { SubscriptionDetailModal } from "./_components/SubscriptionDetailModal";
 
-const API_SIGNATURE = "/admin/signature";
 const PAGE_SIZE = 20;
-
-const statusLabels: Record<string, string> = {
-  ACTIVE: "Ativa",
-  INACTIVE: "Inativa",
-  TRIAL: "Trial",
-};
-
-function normalizeSubscription(row: Record<string, unknown>): Subscription {
-  return {
-    id: (row.id as string) ?? "",
-    companyId: (row.companyId as string) ?? "",
-    companyName: (row.companyName as string) ?? undefined,
-    companyPrimaryEmail: (row.companyPrimaryEmail as string) ?? undefined,
-    planId: (row.planId as string) ?? "",
-    planName: (row.planName as string) ?? undefined,
-    status: (row.status as Subscription["status"]) ?? "INACTIVE",
-    expirationDate: row.expirationDate as string | undefined,
-    yearly: row.yearly as boolean | undefined,
-    createdAt: (row.createdAt as string) ?? "",
-  };
-}
 
 export default function SubscriptionsPage() {
   const { GetAPI } = useApiContext();
@@ -43,17 +28,14 @@ export default function SubscriptionsPage() {
     useState<Subscription | null>(null);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState("");
 
   async function load() {
     setLoading(true);
-    const res = await GetAPI(API_SIGNATURE, true);
+    const list = await fetchAllSubscriptions(GetAPI);
     setLoading(false);
-    if (res.status === 200) {
-      const data = res.body?.subscriptions ?? res.body?.data ?? [];
-      const list = Array.isArray(data) ? data : [];
-      setSubscriptions(
-        list.map((row: Record<string, unknown>) => normalizeSubscription(row)),
-      );
+    if (list) {
+      setSubscriptions(list);
     } else {
       setSubscriptions([]);
       toast.error("Erro ao carregar assinaturas.");
@@ -65,16 +47,19 @@ export default function SubscriptionsPage() {
   }, []);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return subscriptions;
+    const byStatus = statusFilter
+      ? subscriptions.filter((s) => s.status === statusFilter)
+      : subscriptions;
+    if (!search.trim()) return byStatus;
     const q = search.trim().toLowerCase();
-    return subscriptions.filter(
+    return byStatus.filter(
       (s) =>
         s.companyName?.toLowerCase().includes(q) ||
         s.companyPrimaryEmail?.toLowerCase().includes(q) ||
         s.planName?.toLowerCase().includes(q) ||
         statusLabels[s.status]?.toLowerCase().includes(q),
     );
-  }, [subscriptions, search]);
+  }, [subscriptions, search, statusFilter]);
 
   const totalFiltered = filtered.length;
   const paginatedData = useMemo(
@@ -84,7 +69,7 @@ export default function SubscriptionsPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [search]);
+  }, [search, statusFilter]);
 
   const columns: ColumnDef<Subscription>[] = useMemo(
     () => [
@@ -93,6 +78,14 @@ export default function SubscriptionsPage() {
         label: "Cliente",
         sortable: true,
         getValue: (s) => s.companyName ?? "",
+        render: (s) => (
+          <Link
+            href={`/companies/${s.companyId}`}
+            className="text-[var(--dash-accent)] hover:underline"
+          >
+            {s.companyName ?? "—"}
+          </Link>
+        ),
       },
       {
         key: "companyPrimaryEmail",
@@ -111,17 +104,22 @@ export default function SubscriptionsPage() {
         label: "Status",
         sortable: true,
         getValue: (s) => s.status ?? "INACTIVE",
+        render: (s) => <SubscriptionStatusBadge status={s.status} />,
+      },
+      {
+        key: "renewal",
+        label: "Renovação",
+        sortable: true,
+        getValue: (s) => renewalLabel(s),
         render: (s) => (
           <span
-            className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-              s.status === "ACTIVE"
-                ? "bg-green-100 text-green-800"
-                : s.status === "TRIAL"
-                  ? "bg-blue-100 text-blue-800"
-                  : "bg-gray-100 text-gray-600"
-            }`}
+            className={
+              s.hasRecurrence === false && s.status !== "TRIAL"
+                ? "font-medium text-amber-700"
+                : undefined
+            }
           >
-            {statusLabels[s.status] ?? s.status}
+            {renewalLabel(s)}
           </span>
         ),
       },
@@ -174,7 +172,7 @@ export default function SubscriptionsPage() {
         </button>
       </div>
 
-      <div className="rounded-xl border border-[var(--dash-border)] bg-white p-4 shadow-sm">
+      <div className="flex flex-wrap gap-3 rounded-xl border border-[var(--dash-border)] bg-white p-4 shadow-sm">
         <div className="relative min-w-[200px] flex-1">
           <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--dash-text-muted)]" />
           <input
@@ -185,6 +183,17 @@ export default function SubscriptionsPage() {
             className="w-full rounded-xl border border-[var(--dash-border)] bg-white py-2.5 pr-4 pl-9 text-sm text-[var(--dash-text)] placeholder:text-[var(--dash-text-muted)] focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
           />
         </div>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          aria-label="Filtrar por status"
+          className="rounded-xl border border-[var(--dash-border)] bg-white px-4 py-2.5 text-sm text-[var(--dash-text)] focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
+        >
+          <option value="">Todos os status</option>
+          <option value="ACTIVE">Ativa</option>
+          <option value="TRIAL">Trial</option>
+          <option value="INACTIVE">Inativa</option>
+        </select>
       </div>
 
       <DataTable<Subscription>

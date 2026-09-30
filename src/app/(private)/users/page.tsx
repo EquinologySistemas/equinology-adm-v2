@@ -3,60 +3,17 @@
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { Pagination } from "@/components/ui/Pagination";
 import { useApiContext } from "@/context/ApiContext";
-import { formatPhone } from "@/lib/utils";
+import { formatDate } from "@/lib/date";
 import type { User as UserType } from "@/types/admin";
 import { Plus, Search, User } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import toast from "react-hot-toast";
 import { UserCreateModal } from "./_components/UserCreateModal";
 import { UserDetailModal } from "./_components/UserDetailModal";
 
 const API_USERS = "/admin/users";
 const PAGE_SIZE = 20;
-
-const FALLBACK_USERS: UserType[] = [
-  {
-    id: "u1",
-    name: "Maria Silva",
-    email: "maria.silva@haras.com.br",
-    phone: "(11) 98765-4321",
-    company: "Haras Silva",
-    role: "Veterinária",
-    status: "active",
-    planName: "Profissional",
-    createdAt: "2024-06-15T10:00:00Z",
-  },
-  {
-    id: "u2",
-    name: "João Santos",
-    email: "joao@equiclinic.com",
-    phone: "(21) 99876-5432",
-    company: "EquiClinic",
-    role: "Gestor",
-    status: "active",
-    planName: "Empresarial",
-    createdAt: "2024-08-20T14:30:00Z",
-  },
-  {
-    id: "u3",
-    name: "Ana Oliveira",
-    email: "ana.oliveira@vetequus.com",
-    phone: "(31) 91234-5678",
-    company: "VetEquus",
-    role: "Administrador",
-    status: "active",
-    planName: "Profissional",
-    createdAt: "2025-02-25T09:00:00Z",
-  },
-  {
-    id: "u4",
-    name: "Carlos Mendes",
-    email: "carlos@haras.com.br",
-    company: "Haras Mendes",
-    status: "blocked",
-    planName: "Empresarial",
-    createdAt: "2024-11-01T08:00:00Z",
-  },
-];
 
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: "Administrador",
@@ -85,10 +42,14 @@ export default function UsersPage() {
   const [detailUser, setDetailUser] = useState<UserType | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [page, setPage] = useState(1);
+  const [showDeleted, setShowDeleted] = useState(false);
 
   async function loadUsers() {
     setLoading(true);
-    const res = await GetAPI(API_USERS, true);
+    const res = await GetAPI(
+      showDeleted ? `${API_USERS}?includeDeleted=true` : API_USERS,
+      true,
+    );
     setLoading(false);
     if (res.status === 200) {
       const data =
@@ -98,13 +59,15 @@ export default function UsersPage() {
       const list = Array.isArray(data) ? data : [];
       setUsers(list.map((u: Record<string, unknown>) => normalizeUser(u)));
     } else {
-      setUsers(FALLBACK_USERS);
+      setUsers([]);
+      toast.error("Erro ao carregar usuários.");
     }
   }
 
   useEffect(() => {
     loadUsers();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showDeleted]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return users;
@@ -125,7 +88,7 @@ export default function UsersPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [search]);
+  }, [search, showDeleted]);
 
   const columns: ColumnDef<UserType>[] = useMemo(
     () => [
@@ -142,17 +105,21 @@ export default function UsersPage() {
         getValue: (u) => u.email ?? "",
       },
       {
-        key: "phone",
-        label: "Telefone",
-        sortable: true,
-        getValue: (u) => u.phone ?? "",
-        render: (u) => (u.phone ? formatPhone(u.phone) : "—"),
-      },
-      {
         key: "company",
         label: "Empresa",
         sortable: true,
         getValue: (u) => u.company ?? "",
+        render: (u) =>
+          u.companyId ? (
+            <Link
+              href={`/companies/${u.companyId}`}
+              className="text-[var(--dash-accent)] hover:underline"
+            >
+              {u.company ?? "—"}
+            </Link>
+          ) : (
+            (u.company ?? "—")
+          ),
       },
       {
         key: "role",
@@ -170,19 +137,25 @@ export default function UsersPage() {
         key: "status",
         label: "Status",
         sortable: true,
-        getValue: (u) =>
-          (u.status ?? "active") === "active" ? "active" : "blocked",
+        getValue: (u) => (u.isDeleted ? "deleted" : "active"),
         render: (u) => (
           <span
             className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-              (u.status ?? "active") === "active"
-                ? "bg-green-100 text-green-800"
-                : "bg-red-100 text-red-800"
+              u.isDeleted
+                ? "bg-red-100 text-red-800"
+                : "bg-green-100 text-green-800"
             }`}
           >
-            {(u.status ?? "active") === "active" ? "Ativo" : "Bloqueado"}
+            {u.isDeleted ? "Excluído" : "Ativo"}
           </span>
         ),
+      },
+      {
+        key: "lastLoginAt",
+        label: "Último acesso",
+        sortable: true,
+        getValue: (u) => u.lastLoginAt ?? "",
+        render: (u) => formatDate(u.lastLoginAt),
       },
       {
         key: "createdAt",
@@ -234,6 +207,15 @@ export default function UsersPage() {
             className="w-full rounded-xl border border-[var(--dash-border)] bg-white py-2.5 pr-4 pl-9 text-sm text-[var(--dash-text)] placeholder:text-[var(--dash-text-muted)] focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
           />
         </div>
+        <label className="mt-3 inline-flex cursor-pointer items-center gap-2 text-sm text-[var(--dash-text-muted)]">
+          <input
+            type="checkbox"
+            checked={showDeleted}
+            onChange={(e) => setShowDeleted(e.target.checked)}
+            className="h-4 w-4 accent-[var(--dash-accent)]"
+          />
+          Mostrar usuários excluídos
+        </label>
       </div>
 
       <DataTable<UserType>

@@ -4,18 +4,15 @@ import { Modal } from "@/components/ui/Modal";
 import { useApiContext } from "@/context/ApiContext";
 import { formatDate } from "@/lib/date";
 import { planFromApi } from "@/lib/plans-api";
+import { renewalLabel } from "@/lib/subscriptions-api";
+import { SubscriptionStatusBadge } from "@/components/ui/SubscriptionStatusBadge";
+import Link from "next/link";
 import type { Plan, Subscription } from "@/types/admin";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
 const API_SIGNATURE = "/admin/signature";
-const API_PLANS = "/signature-plan";
-
-const statusLabels: Record<string, string> = {
-  ACTIVE: "Ativa",
-  INACTIVE: "Inativa",
-  TRIAL: "Trial",
-};
+const API_PLANS = "/admin/plans";
 
 /** Status de cobrança retornados pela API Asaas (pagamentos da assinatura) */
 const paymentHistoryStatusLabels: Record<string, string> = {
@@ -45,6 +42,13 @@ function formatPaymentHistoryStatus(status: string): string {
   if (!status) return "—";
   const key = status.trim().toUpperCase();
   return paymentHistoryStatusLabels[key] ?? status;
+}
+
+/** Data local (não UTC) no formato do <input type="date">. */
+function toLocalDateInput(value: string): string {
+  const d = new Date(value);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
 interface SubscriptionDetailModalProps {
@@ -119,7 +123,13 @@ export function SubscriptionDetailModal({
   }
 
   async function reactivate() {
-    if (!subscription) return;
+    if (
+      !subscription ||
+      !confirm(
+        "Reativar gera uma nova cobrança recorrente e copia o link de pagamento. O acesso volta assim que o cliente pagar. Continuar?",
+      )
+    )
+      return;
     await handleAction(() =>
       PostAPI(`${API_SIGNATURE}/reactivate/${subscription.id}`, {}, true),
     );
@@ -196,7 +206,14 @@ export function SubscriptionDetailModal({
     if (res.status === 200) {
       const raw = res.body?.plans ?? res.body ?? [];
       const list = Array.isArray(raw) ? raw : [];
-      setPlans(list.map((p: Record<string, unknown>) => planFromApi(p)));
+      // Só planos ativos, mais o plano atual (para o select não ficar vazio).
+      setPlans(
+        list
+          .map((p: Record<string, unknown>) => planFromApi(p))
+          .filter(
+            (p: Plan) => p.active !== false || p.id === subscription?.planId,
+          ),
+      );
     }
   }
 
@@ -208,6 +225,11 @@ export function SubscriptionDetailModal({
   }
 
   useEffect(() => {
+    // Estado de outra assinatura não pode vazar para esta (o histórico da
+    // anterior aparecia na seguinte).
+    setHistoryPayments(null);
+    setShowChangePlan(false);
+    setShowUpdate(false);
     if (subscription) {
       setEditStatus(
         subscription.status === "TRIAL"
@@ -216,7 +238,7 @@ export function SubscriptionDetailModal({
       );
       setEditExpiration(
         subscription.expirationDate
-          ? new Date(subscription.expirationDate).toISOString().slice(0, 10)
+          ? toLocalDateInput(subscription.expirationDate)
           : "",
       );
     }
@@ -228,8 +250,12 @@ export function SubscriptionDetailModal({
     const payload: { status?: string; expirationDate?: string } = {};
     if (editStatus && editStatus !== subscription.status)
       payload.status = editStatus;
+    // "2027-12-31" puro vira meia-noite UTC (30/12 às 21h em Brasília): o
+    // acesso acabava na véspera. Grava o FIM do dia escolhido, no fuso local.
     if (editExpiration)
-      payload.expirationDate = new Date(editExpiration).toISOString();
+      payload.expirationDate = new Date(
+        `${editExpiration}T23:59:59`,
+      ).toISOString();
     if (Object.keys(payload).length === 0) {
       setSaving(false);
       return;
@@ -262,7 +288,16 @@ export function SubscriptionDetailModal({
           <div>
             <dt className="text-[var(--dash-text-muted)]">Cliente</dt>
             <dd className="font-medium text-[var(--dash-text)]">
-              {subscription.companyName ?? "—"}
+              {subscription.companyId ? (
+                <Link
+                  href={`/companies/${subscription.companyId}`}
+                  className="text-[var(--dash-accent)] hover:underline"
+                >
+                  {subscription.companyName ?? "Ver empresa"}
+                </Link>
+              ) : (
+                (subscription.companyName ?? "—")
+              )}
             </dd>
           </div>
           <div>
@@ -286,17 +321,13 @@ export function SubscriptionDetailModal({
           <div>
             <dt className="text-[var(--dash-text-muted)]">Status</dt>
             <dd>
-              <span
-                className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                  subscription.status === "ACTIVE"
-                    ? "bg-green-100 text-green-800"
-                    : subscription.status === "TRIAL"
-                      ? "bg-blue-100 text-blue-800"
-                      : "bg-gray-100 text-gray-600"
-                }`}
-              >
-                {statusLabels[subscription.status] ?? subscription.status}
-              </span>
+              <SubscriptionStatusBadge status={subscription.status} />
+            </dd>
+          </div>
+          <div>
+            <dt className="text-[var(--dash-text-muted)]">Renovação</dt>
+            <dd className="text-[var(--dash-text)]">
+              {renewalLabel(subscription)}
             </dd>
           </div>
           <div>
@@ -327,6 +358,12 @@ export function SubscriptionDetailModal({
           >
             {showUpdate ? "Ocultar" : "Alterar status ou validade"}
           </button>
+          {showUpdate && (
+            <p className="mt-2 text-xs text-[var(--dash-text-muted)]">
+              Ajuste manual: não gera nem confere cobrança no Asaas. Status
+              Ativa com validade futura libera o acesso mesmo sem pagamento.
+            </p>
+          )}
           {showUpdate && (
             <div className="mt-3 flex flex-wrap items-end gap-3">
               <div>
@@ -399,14 +436,16 @@ export function SubscriptionDetailModal({
                 Renovar anual
               </button>
             )}
-            <button
-              type="button"
-              onClick={charge}
-              disabled={loading}
-              className="rounded-xl border border-[var(--dash-border)] bg-white px-3 py-2 text-sm font-medium text-[var(--dash-text)] hover:bg-[var(--dash-bg)]/80 disabled:opacity-60"
-            >
-              Gerar cobrança
-            </button>
+            {subscription.status !== "INACTIVE" && (
+              <button
+                type="button"
+                onClick={charge}
+                disabled={loading}
+                className="rounded-xl border border-[var(--dash-border)] bg-white px-3 py-2 text-sm font-medium text-[var(--dash-text)] hover:bg-[var(--dash-bg)]/80 disabled:opacity-60"
+              >
+                Gerar cobrança
+              </button>
+            )}
             <button
               type="button"
               onClick={openChangePlan}

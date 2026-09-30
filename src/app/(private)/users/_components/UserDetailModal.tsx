@@ -2,12 +2,15 @@
 
 import { Modal } from "@/components/ui/Modal";
 import { useApiContext } from "@/context/ApiContext";
+import { formatDate } from "@/lib/date";
 import { formatPhone, unmaskPhone } from "@/lib/utils";
 import type { CompanyOption, User, UserUpdatePayload } from "@/types/admin";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import Link from "next/link";
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 
 const ROLE_OPTIONS = [
   { value: "ADMIN", label: "Administrador" },
@@ -49,8 +52,9 @@ export function UserDetailModal({
   onClose,
   onSaved,
 }: UserDetailModalProps) {
-  const { GetAPI, PatchAPI } = useApiContext();
+  const { GetAPI, PatchAPI, DeleteAPI, PostAPI } = useApiContext();
   const [isEditing, setIsEditing] = useState(false);
+  const [statusBusy, setStatusBusy] = useState(false);
   const [companies, setCompanies] = useState<CompanyOption[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -128,6 +132,44 @@ export function UserDetailModal({
     }
   }
 
+  function errorMessage(body: unknown, fallback: string) {
+    if (typeof body === "string") return body;
+    const msg = (body as { message?: unknown } | null)?.message;
+    return typeof msg === "string" ? msg : fallback;
+  }
+
+  async function handleDelete() {
+    if (!user) return;
+    if (
+      !confirm(
+        `Excluir ${user.name}? O acesso é bloqueado na hora e a vaga do plano é liberada. O histórico de atendimentos é mantido e a exclusão pode ser desfeita.`,
+      )
+    )
+      return;
+    setStatusBusy(true);
+    const res = await DeleteAPI(`/admin/users/${user.id}`, true);
+    setStatusBusy(false);
+    if (res.status === 200) {
+      toast.success("Usuário excluído.");
+      onSaved();
+    } else {
+      toast.error(errorMessage(res.body, "Erro ao excluir usuário."));
+    }
+  }
+
+  async function handleRestore() {
+    if (!user) return;
+    setStatusBusy(true);
+    const res = await PostAPI(`/admin/users/${user.id}/restore`, {}, true);
+    setStatusBusy(false);
+    if (res.status === 200) {
+      toast.success("Usuário restaurado.");
+      onSaved();
+    } else {
+      toast.error(errorMessage(res.body, "Erro ao restaurar usuário."));
+    }
+  }
+
   const roleLabel = (role: string | undefined) =>
     ROLE_OPTIONS.find((r) => r.value === role)?.label ?? role ?? "—";
 
@@ -169,7 +211,16 @@ export function UserDetailModal({
                   Empresa
                 </dt>
                 <dd className="text-[var(--dash-text)]">
-                  {user.company ?? "—"}
+                  {user.companyId ? (
+                    <Link
+                      href={`/companies/${user.companyId}`}
+                      className="text-[var(--dash-accent)] hover:underline"
+                    >
+                      {user.company ?? "Ver empresa"}
+                    </Link>
+                  ) : (
+                    (user.company ?? "—")
+                  )}
                 </dd>
               </div>
               <div>
@@ -178,6 +229,34 @@ export function UserDetailModal({
                 </dt>
                 <dd className="text-[var(--dash-text)]">
                   {roleLabel(user.role)}
+                </dd>
+              </div>
+              <div>
+                <dt className="font-medium text-[var(--dash-text-muted)]">
+                  Plano da empresa
+                </dt>
+                <dd className="text-[var(--dash-text)]">
+                  {user.planName ?? "Sem assinatura vigente"}
+                </dd>
+              </div>
+              <div>
+                <dt className="font-medium text-[var(--dash-text-muted)]">
+                  Status
+                </dt>
+                <dd className="text-[var(--dash-text)]">
+                  {user.isDeleted
+                    ? `Excluído em ${formatDate(user.deletedAt)}`
+                    : "Ativo"}
+                </dd>
+              </div>
+              <div>
+                <dt className="font-medium text-[var(--dash-text-muted)]">
+                  Último acesso
+                </dt>
+                <dd className="text-[var(--dash-text)]">
+                  {user.lastLoginAt
+                    ? new Date(user.lastLoginAt).toLocaleString("pt-BR")
+                    : "Nunca acessou"}
                 </dd>
               </div>
               <div>
@@ -192,13 +271,34 @@ export function UserDetailModal({
               </div>
             </dl>
             <div className="flex flex-wrap gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setIsEditing(true)}
-                className="rounded-xl bg-[var(--dash-accent)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--dash-accent-muted)]"
-              >
-                Editar
-              </button>
+              {user.isDeleted ? (
+                <button
+                  type="button"
+                  onClick={handleRestore}
+                  disabled={statusBusy}
+                  className="rounded-xl bg-[var(--dash-accent)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--dash-accent-muted)] disabled:opacity-60"
+                >
+                  {statusBusy ? "Restaurando…" : "Restaurar"}
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(true)}
+                    className="rounded-xl bg-[var(--dash-accent)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--dash-accent-muted)]"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={statusBusy}
+                    className="rounded-xl border border-red-200 bg-white px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-60"
+                  >
+                    {statusBusy ? "Excluindo…" : "Excluir"}
+                  </button>
+                </>
+              )}
               <button
                 type="button"
                 onClick={onClose}

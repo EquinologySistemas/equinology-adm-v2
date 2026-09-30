@@ -90,9 +90,12 @@ export interface User {
   company?: string;
   companyId?: string;
   role?: string;
-  status?: "active" | "blocked";
   planId?: string;
   planName?: string;
+  /** Exclusão lógica: só aparece com "Mostrar excluídos" ligado. */
+  isDeleted?: boolean;
+  deletedAt?: string | null;
+  lastLoginAt?: string | null;
   createdAt: string;
   updatedAt?: string;
 }
@@ -132,8 +135,23 @@ export interface Company {
   paymentId?: string;
   paymentType?: string;
   paymentResponsibleId?: string | null;
+  phone?: string | null;
+  /** Usuários não excluídos da empresa (só na listagem do admin). */
+  usersCount?: number;
+  /** Assinatura vigente (ou a mais recente) — só na listagem do admin. */
+  currentSignature?: CompanyCurrentSignature | null;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface CompanyCurrentSignature {
+  id: string;
+  status: "ACTIVE" | "INACTIVE" | "TRIAL";
+  planId: string;
+  planName: string;
+  expirationDate?: string;
+  yearly?: boolean;
+  isAutoRenewActivated?: boolean;
 }
 
 export interface CompanyUpdatePayload {
@@ -164,6 +182,9 @@ export interface Subscription {
   status: "ACTIVE" | "INACTIVE" | "TRIAL";
   expirationDate?: string;
   yearly?: boolean;
+  isAutoRenewActivated?: boolean;
+  /** false = cobrança avulsa no Asaas, sem renovação automática. */
+  hasRecurrence?: boolean;
   createdAt: string;
 }
 

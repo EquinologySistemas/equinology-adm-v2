@@ -11,7 +11,7 @@ import toast from "react-hot-toast";
 import { PlanCreateModal } from "./_components/PlanCreateModal";
 import { PlanDetailModal } from "./_components/PlanDetailModal";
 
-const API_PLANS = "/signature-plan";
+const API_PLANS = "/admin/plans";
 const API_PLANS_DELETE = "/admin/plans";
 const PAGE_SIZE = 20;
 
@@ -24,7 +24,7 @@ function formatBRL(value: number | null | undefined): string {
 }
 
 export default function PlansPage() {
-  const { GetAPI, DeleteAPI } = useApiContext();
+  const { GetAPI, DeleteAPI, PutAPI } = useApiContext();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
@@ -62,6 +62,23 @@ export default function PlansPage() {
       loadPlans();
     } else {
       toast.error(res.body?.message ?? "Erro ao excluir plano.");
+    }
+  }
+
+  // Plano inativo some do checkout e das opções de venda do painel, mas
+  // quem já assina continua com ele.
+  async function toggleActive(plan: Plan) {
+    const next = plan.active === false;
+    const res = await PutAPI(
+      `${API_PLANS_DELETE}/${plan.id}`,
+      { isActive: next },
+      true,
+    );
+    if (res.status === 200) {
+      toast.success(next ? "Plano ativado." : "Plano desativado.");
+      loadPlans();
+    } else {
+      toast.error(res.body?.message ?? "Erro ao alterar o plano.");
     }
   }
 
@@ -105,15 +122,18 @@ export default function PlansPage() {
         sortable: true,
         getValue: (p) => (p.active !== false ? "sim" : "não"),
         render: (p) => (
-          <span
-            className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+          <button
+            type="button"
+            onClick={() => toggleActive(p)}
+            title={p.active !== false ? "Desativar plano" : "Ativar plano"}
+            className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium hover:opacity-80 ${
               p.active !== false
                 ? "bg-green-100 text-green-800"
                 : "bg-gray-100 text-gray-600"
             }`}
           >
             {p.active !== false ? "Sim" : "Não"}
-          </span>
+          </button>
         ),
       },
     ],

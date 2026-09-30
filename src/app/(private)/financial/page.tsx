@@ -59,6 +59,10 @@ export default function FinancialPage() {
   const [startDate, setStartDate] = useState(firstDayOfCurrentMonth());
   const [endDate, setEndDate] = useState("");
   const [status, setStatus] = useState("");
+  const [companyId, setCompanyId] = useState("");
+  const [companies, setCompanies] = useState<{ id: string; name: string }[]>(
+    [],
+  );
   const [detailTransaction, setDetailTransaction] =
     useState<SubscriptionTransaction | null>(null);
 
@@ -76,6 +80,7 @@ export default function FinancialPage() {
           startDate: startDate || undefined,
           endDate: endDate || undefined,
           status: status || undefined,
+          companyId: companyId || undefined,
         }),
       ]);
 
@@ -95,7 +100,7 @@ export default function FinancialPage() {
     } finally {
       setLoading(false);
     }
-  }, [GetAPI, page, pageSize, startDate, endDate, status]);
+  }, [GetAPI, page, pageSize, startDate, endDate, status, companyId]);
 
   useEffect(() => {
     load();
@@ -103,7 +108,17 @@ export default function FinancialPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [startDate, endDate, status, pageSize]);
+  }, [startDate, endDate, status, pageSize, companyId]);
+
+  useEffect(() => {
+    (async () => {
+      const res = await GetAPI("/admin/companies", true);
+      if (res.status === 200 && Array.isArray(res.body?.companies)) {
+        setCompanies(res.body.companies);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Busca textual: a API não tem busca por texto, então ela refina apenas a
   // página já carregada. O rótulo do campo diz isso para não enganar.
@@ -329,6 +344,21 @@ export default function FinancialPage() {
               {statusFilterOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-xs font-medium text-[var(--dash-text-muted)]">
+            Empresa
+            <select
+              value={companyId}
+              onChange={(e) => setCompanyId(e.target.value)}
+              className="max-w-[240px] rounded-xl border border-[var(--dash-border)] bg-white px-3 py-2 text-sm text-[var(--dash-text)] focus:ring-2 focus:ring-[var(--dash-accent)]/30 focus:outline-none"
+            >
+              <option value="">Todas as empresas</option>
+              {companies.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
                 </option>
               ))}
             </select>

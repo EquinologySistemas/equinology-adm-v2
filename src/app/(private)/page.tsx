@@ -7,7 +7,9 @@ import {
   getFinancialSummary,
   getSubscriptionTransactions,
 } from "@/lib/financial-api";
+import { formatDate } from "@/lib/date";
 import type {
+  Company,
   FinancialSummary,
   Subscription,
   SubscriptionTransaction,
@@ -26,7 +28,7 @@ import {
 
 const API_USERS = "/admin/users";
 const API_COMPANIES = "/admin/companies";
-const API_PLANS = "/signature-plan";
+const API_PLANS = "/admin/plans";
 const API_COUPONS = "/admin/coupons";
 const API_ADS = "/admin/ads";
 const API_SIGNATURE = "/admin/signature";
@@ -128,6 +130,7 @@ export default function DashboardPage() {
   const [recentSubscriptions, setRecentSubscriptions] = useState<
     Subscription[]
   >([]);
+  const [expiringSoon, setExpiringSoon] = useState<Company[]>([]);
   const [welcomeName, setWelcomeName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -222,14 +225,35 @@ export default function DashboardPage() {
             : [];
 
         const plansList = Array.isArray(plans) ? plans : [];
+        // A API devolve `isActive` (não `active`): o filtro antigo contava
+        // todos os planos como ativos.
         const activePlans = plansList.filter(
-          (p: { active?: boolean }) => p.active !== false,
+          (p: { isActive?: boolean }) => p.isActive !== false,
         );
         const adsList = Array.isArray(ads) ? ads : [];
         const activeAds = adsList.filter(
           (a: { active?: boolean }) => a.active !== false,
         );
         const companiesList = Array.isArray(companiesRaw) ? companiesRaw : [];
+
+        // Assinaturas vigentes que vencem nos próximos 7 dias: quem cobrar.
+        const now = Date.now();
+        const limit = now + 7 * 24 * 60 * 60 * 1000;
+        setExpiringSoon(
+          (companiesList as Company[])
+            .filter((c) => {
+              const sig = c.currentSignature;
+              if (!sig?.expirationDate || sig.status === "INACTIVE")
+                return false;
+              const t = new Date(sig.expirationDate).getTime();
+              return t >= now && t <= limit;
+            })
+            .sort(
+              (a, b) =>
+                new Date(a.currentSignature!.expirationDate!).getTime() -
+                new Date(b.currentSignature!.expirationDate!).getTime(),
+            ),
+        );
 
         setOperational({
           usersTotal: Array.isArray(users) ? users.length : 0,
@@ -496,9 +520,12 @@ export default function DashboardPage() {
                   className="flex flex-col gap-0.5 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div>
-                    <p className="text-sm font-medium text-[var(--dash-text)]">
+                    <Link
+                      href={`/companies/${s.companyId}`}
+                      className="text-sm font-medium text-[var(--dash-text)] hover:text-[var(--dash-accent)] hover:underline"
+                    >
                       {s.companyName || "—"}
-                    </p>
+                    </Link>
                     <p className="text-xs text-[var(--dash-text-muted)]">
                       {s.planName ?? "—"} ·{" "}
                       {subscriptionStatusLabels[s.status] ?? s.status}
@@ -519,6 +546,44 @@ export default function DashboardPage() {
             </ul>
           )}
         </div>
+      </div>
+
+      <div className="rounded-xl border border-[var(--dash-border)] bg-[var(--dash-card)] p-5 shadow-sm">
+        <h3 className="text-sm font-medium text-[var(--dash-text-muted)]">
+          Vencendo nos próximos 7 dias
+        </h3>
+        {expiringSoon.length === 0 ? (
+          <p className="mt-3 text-sm text-[var(--dash-text-muted)]">
+            Nenhuma assinatura vence nos próximos 7 dias.
+          </p>
+        ) : (
+          <ul className="mt-3 divide-y divide-[var(--dash-border)]">
+            {expiringSoon.map((c) => (
+              <li
+                key={c.id}
+                className="flex flex-col gap-0.5 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div>
+                  <Link
+                    href={`/companies/${c.id}`}
+                    className="text-sm font-medium text-[var(--dash-text)] hover:text-[var(--dash-accent)] hover:underline"
+                  >
+                    {c.name}
+                  </Link>
+                  <p className="text-xs text-[var(--dash-text-muted)]">
+                    {c.currentSignature?.planName ?? "—"} ·{" "}
+                    {subscriptionStatusLabels[
+                      c.currentSignature?.status ?? ""
+                    ] ?? "—"}
+                  </p>
+                </div>
+                <p className="text-xs text-[var(--dash-text-muted)]">
+                  Vence em {formatDate(c.currentSignature?.expirationDate)}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );

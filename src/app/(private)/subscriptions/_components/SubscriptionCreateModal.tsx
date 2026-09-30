@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
 const API_COMPANIES = "/admin/companies";
-const API_PLANS = "/signature-plan";
+const API_PLANS = "/admin/plans";
 const API_SIGNATURE = "/admin/signature";
 const API_COUPONS = "/admin/coupons";
 
@@ -17,12 +17,15 @@ interface SubscriptionCreateModalProps {
   open: boolean;
   onClose: () => void;
   onSaved: () => void;
+  /** Pré-seleciona a empresa (aberto a partir da página da empresa). */
+  defaultCompanyId?: string;
 }
 
 export function SubscriptionCreateModal({
   open,
   onClose,
   onSaved,
+  defaultCompanyId,
 }: SubscriptionCreateModalProps) {
   const { GetAPI, PostAPI } = useApiContext();
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -54,14 +57,16 @@ export function SubscriptionCreateModal({
         const list = companiesRes.body?.companies ?? [];
         const arr = Array.isArray(list) ? list : [];
         setCompanies(arr);
-        if (arr.length) setCompanyId(arr[0].id);
+        if (defaultCompanyId) setCompanyId(defaultCompanyId);
+        else if (arr.length) setCompanyId(arr[0].id);
       }
       if (plansRes.status === 200) {
         const raw = plansRes.body?.plans ?? plansRes.body ?? [];
         const list = Array.isArray(raw) ? raw : [];
-        const normalized: Plan[] = list.map((p: Record<string, unknown>) =>
-          planFromApi(p),
-        );
+        // Plano desativado não é oferecido para venda nova.
+        const normalized: Plan[] = list
+          .map((p: Record<string, unknown>) => planFromApi(p))
+          .filter((p: Plan) => p.active !== false);
         setPlans(normalized);
         if (normalized.length) setPlanId(normalized[0].id);
       }
@@ -74,7 +79,7 @@ export function SubscriptionCreateModal({
         setCoupons(activeCoupons);
       }
     })();
-  }, [open, GetAPI]);
+  }, [open, GetAPI, defaultCompanyId]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

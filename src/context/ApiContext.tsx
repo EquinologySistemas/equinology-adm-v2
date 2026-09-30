@@ -81,17 +81,17 @@ export const ApiContextProvider = ({ children }: ProviderProps) => {
     };
   }
 
-  async function PostAPI(url: string, data: unknown, auth: boolean) {
-    const connect = await api
-      .post(url, data, config(auth))
-      .then(({ data }) => {
-        return {
-          status: 200,
-          body: data,
-        };
-      })
+  /**
+   * Normaliza qualquer chamada em `{ status, body }`. `err.response` é
+   * undefined em erro de rede (backend fora do ar): antes só o POST tratava
+   * isso e os demais métodos quebravam a tela com TypeError.
+   */
+  async function request(
+    call: Promise<{ data: unknown }>,
+  ): Promise<{ status: number; body: any }> {
+    const connect = await call
+      .then(({ data }) => ({ status: 200, body: data as any }))
       .catch((err) => {
-        // err.response é undefined em erro de rede (ex.: backend/túnel fora do ar).
         const status = err.response?.status ?? 0;
         const message =
           err.response?.data ?? "Não foi possível conectar ao servidor.";
@@ -106,97 +106,20 @@ export const ApiContextProvider = ({ children }: ProviderProps) => {
       : connect;
   }
 
-  async function GetAPI(url: string, auth: boolean) {
-    const connect = await api
-      .get(url, config(auth))
-      .then(({ data }) => {
-        return {
-          status: 200,
-          body: data,
-        };
-      })
-      .catch((err) => {
-        const message = err.response.data;
-        const status = err.response.status;
-        return { status, body: message };
-      });
+  const PostAPI = (url: string, data: unknown, auth: boolean) =>
+    request(api.post(url, data, config(auth)));
 
-    return connect.status === 500
-      ? {
-          status: connect.status,
-          body: "Ops! algo deu errado, tente novamente",
-        }
-      : connect;
-  }
+  const GetAPI = (url: string, auth: boolean) =>
+    request(api.get(url, config(auth)));
 
-  async function PutAPI(url: string, data: unknown, auth: boolean) {
-    const connect = await api
-      .put(url, data, config(auth))
-      .then(({ data }) => {
-        return {
-          status: 200,
-          body: data,
-        };
-      })
-      .catch((err) => {
-        const message = err.response.data;
-        const status = err.response.status;
-        return { status, body: message };
-      });
+  const PutAPI = (url: string, data: unknown, auth: boolean) =>
+    request(api.put(url, data, config(auth)));
 
-    return connect.status === 500
-      ? {
-          status: connect.status,
-          body: "Ops! algo deu errado, tente novamente",
-        }
-      : connect;
-  }
+  const PatchAPI = (url: string, data: unknown, auth: boolean) =>
+    request(api.patch(url, data, config(auth)));
 
-  async function PatchAPI(url: string, data: unknown, auth: boolean) {
-    const connect = await api
-      .patch(url, data, config(auth))
-      .then(({ data }) => {
-        return {
-          status: 200,
-          body: data,
-        };
-      })
-      .catch((err) => {
-        const message = err.response.data;
-        const status = err.response.status;
-        return { status, body: message };
-      });
-
-    return connect.status === 500
-      ? {
-          status: connect.status,
-          body: "Ops! algo deu errado, tente novamente",
-        }
-      : connect;
-  }
-
-  async function DeleteAPI(url: string, auth: boolean) {
-    const connect = await api
-      .delete(url, config(auth))
-      .then(({ data }) => {
-        return {
-          status: 200,
-          body: data,
-        };
-      })
-      .catch((err) => {
-        const message = err.response.data;
-        const status = err.response.status;
-        return { status, body: message };
-      });
-
-    return connect.status === 500
-      ? {
-          status: connect.status,
-          body: "Ops! algo deu errado, tente novamente",
-        }
-      : connect;
-  }
+  const DeleteAPI = (url: string, auth: boolean) =>
+    request(api.delete(url, config(auth)));
 
   return (
     <ApiContext.Provider
