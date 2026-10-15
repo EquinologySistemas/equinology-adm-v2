@@ -1,4 +1,5 @@
 "use client";
+import { PaymentManagement } from "../../subscriptions/_components/PaymentManagement";
 
 import { Modal } from "@/components/ui/Modal";
 import { formatDate } from "@/lib/date";
@@ -45,7 +46,7 @@ export function TransactionDetailModal({
       open={open}
       onClose={onClose}
       title="Detalhes da transação"
-      className="max-w-lg"
+      className="max-w-3xl"
     >
       <div className="space-y-4">
         <dl className="grid gap-2 text-sm">
@@ -119,6 +120,12 @@ export function TransactionDetailModal({
           </div>
         </dl>
       </div>
+      {transaction?.signatureId && (
+        <PaymentManagement
+          signatureId={transaction.signatureId}
+          onUpdated={() => {}}
+        />
+      )}
     </Modal>
   );
 }

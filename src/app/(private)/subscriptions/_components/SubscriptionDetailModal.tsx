@@ -1,8 +1,8 @@
 "use client";
 
+import { PaymentManagement } from "./PaymentManagement";
 import { Modal } from "@/components/ui/Modal";
 import { useApiContext } from "@/context/ApiContext";
-import { formatDate } from "@/lib/date";
 import { planFromApi } from "@/lib/plans-api";
 import { renewalLabel } from "@/lib/subscriptions-api";
 import { SubscriptionStatusBadge } from "@/components/ui/SubscriptionStatusBadge";
@@ -13,36 +13,6 @@ import toast from "react-hot-toast";
 
 const API_SIGNATURE = "/admin/signature";
 const API_PLANS = "/admin/plans";
-
-/** Status de cobrança retornados pela API Asaas (pagamentos da assinatura) */
-const paymentHistoryStatusLabels: Record<string, string> = {
-  PENDING: "Pendente",
-  RECEIVED: "Recebido",
-  CONFIRMED: "Confirmado",
-  OVERDUE: "Vencido",
-  REFUNDED: "Estornado",
-  RECEIVED_IN_CASH: "Recebido em dinheiro",
-  REFUND_REQUESTED: "Estorno solicitado",
-  REFUND_IN_PROGRESS: "Estorno em andamento",
-  CHARGEBACK_REQUESTED: "Chargeback solicitado",
-  CHARGEBACK_DISPUTE: "Chargeback em disputa",
-  AWAITING_CHARGEBACK_REVERSAL: "Aguardando reversão do chargeback",
-  DUNNING_REQUESTED: "Cobrança extrajudicial solicitada",
-  DUNNING_RECEIVED: "Cobrança extrajudicial recebida",
-  AWAITING_RISK_ANALYSIS: "Aguardando análise de risco",
-  APPROVED: "Aprovado",
-  CANCELLED: "Cancelado",
-  DELETED: "Excluído",
-  CHARGEDBACK: "Chargeback",
-  SPLIT_DIVERGENCE_BLOCK: "Bloqueado por divergência de split",
-  SPLIT_DIVERGENCE_BLOCK_FINISHED: "Divergência de split finalizada",
-};
-
-function formatPaymentHistoryStatus(status: string): string {
-  if (!status) return "—";
-  const key = status.trim().toUpperCase();
-  return paymentHistoryStatusLabels[key] ?? status;
-}
 
 /** Data local (não UTC) no formato do <input type="date">. */
 function toLocalDateInput(value: string): string {
@@ -116,7 +86,13 @@ export function SubscriptionDetailModal({
   }
 
   async function cancel() {
-    if (!subscription || !confirm("Cancelar esta assinatura?")) return;
+    if (
+      !subscription ||
+      !confirm(
+        "Cancelar a renovação? O acesso será mantido até o fim do período já pago.",
+      )
+    )
+      return;
     await handleAction(() =>
       PostAPI(`${API_SIGNATURE}/cancel/${subscription.id}`, {}, true),
     );
@@ -281,7 +257,7 @@ export function SubscriptionDetailModal({
       open={open}
       onClose={onClose}
       title="Detalhes da assinatura"
-      className="max-w-lg"
+      className="max-w-3xl"
     >
       <div className="space-y-4">
         <dl className="grid gap-2 text-sm">
@@ -423,7 +399,7 @@ export function SubscriptionDetailModal({
                 disabled={loading}
                 className="rounded-xl border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-60"
               >
-                Cancelar
+                Cancelar renovação
               </button>
             )}
             {subscription.status === "ACTIVE" && !subscription.yearly && (
@@ -443,7 +419,7 @@ export function SubscriptionDetailModal({
                 disabled={loading}
                 className="rounded-xl border border-[var(--dash-border)] bg-white px-3 py-2 text-sm font-medium text-[var(--dash-text)] hover:bg-[var(--dash-bg)]/80 disabled:opacity-60"
               >
-                Gerar cobrança
+                Obter ou gerar cobrança
               </button>
             )}
             <button
@@ -518,39 +494,10 @@ export function SubscriptionDetailModal({
         )}
 
         {historyPayments !== null && !showChangePlan && (
-          <div className="border-t border-[var(--dash-border)] pt-4">
-            <p className="mb-2 text-sm font-medium text-[var(--dash-text)]">
-              Histórico de pagamentos
-            </p>
-            {historyPayments.length === 0 ? (
-              <p className="text-sm text-[var(--dash-text-muted)]">
-                Nenhum pagamento listado.
-              </p>
-            ) : (
-              <ul className="space-y-1 text-sm">
-                {historyPayments.map((p) => (
-                  <li
-                    key={p.id}
-                    className="flex justify-between text-[var(--dash-text)]"
-                  >
-                    <span>
-                      {/* Vencimento e liquidação são coisas diferentes: a
-                          lista mostra o vencimento e, quando o provedor
-                          informa, o dia em que o dinheiro entrou. */}
-                      {p.dueDate ? `Venc. ${formatDate(p.dueDate)}` : p.id}
-                      {p.paymentDate
-                        ? ` · Pago em ${formatDate(p.paymentDate)}`
-                        : ""}
-                    </span>
-                    <span>
-                      R$ {Number(p.value).toFixed(2)} —{" "}
-                      {formatPaymentHistoryStatus(p.status)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+          <PaymentManagement
+            signatureId={subscription.id}
+            onUpdated={onUpdated}
+          />
         )}
       </div>
     </Modal>

@@ -155,6 +155,8 @@ export interface CompanyCurrentSignature {
 }
 
 export interface CompanyUpdatePayload {
+  phone?: string | null;
+  paymentResponsibleId?: string | null;
   name?: string;
   address?: string;
   number?: string;

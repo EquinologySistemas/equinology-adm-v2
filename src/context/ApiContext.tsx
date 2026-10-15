@@ -2,7 +2,7 @@
 "use client";
 import axios from "axios";
 import { useCookies } from "next-client-cookies";
-import { createContext, useContext } from "react";
+import { createContext, useContext, useRef } from "react";
 import { getTokenCookieName } from "@/lib/auth-cookies";
 
 const baseURL = process.env.NEXT_PUBLIC_API_URL;
@@ -44,6 +44,7 @@ interface ProviderProps {
 export const ApiContextProvider = ({ children }: ProviderProps) => {
   const cookies = useCookies();
   const tokenCookieName = getTokenCookieName();
+  const retryKeys = useRef(new Map<string, string>());
 
   const api = axios.create({
     baseURL,
@@ -106,20 +107,52 @@ export const ApiContextProvider = ({ children }: ProviderProps) => {
       : connect;
   }
 
+  async function mutate(
+    method: "post" | "put" | "patch" | "delete",
+    url: string,
+    data: unknown,
+    auth: boolean,
+  ) {
+    const multipart = data instanceof FormData;
+    const signature = JSON.stringify([
+      method,
+      url,
+      cookies.get(tokenCookieName),
+      data,
+    ]);
+    const key = retryKeys.current.get(signature) ?? crypto.randomUUID();
+    if (!multipart && auth) retryKeys.current.set(signature, key);
+    const settings = config(auth);
+    const response = await request(
+      api.request({
+        method,
+        url,
+        data,
+        ...settings,
+        headers: {
+          ...settings.headers,
+          ...(!multipart && auth ? { "Idempotency-Key": key } : {}),
+        },
+      }),
+    );
+    if (response.status > 0 && response.status < 500 && response.status !== 409)
+      retryKeys.current.delete(signature);
+    return response;
+  }
   const PostAPI = (url: string, data: unknown, auth: boolean) =>
-    request(api.post(url, data, config(auth)));
+    mutate("post", url, data, auth);
 
   const GetAPI = (url: string, auth: boolean) =>
     request(api.get(url, config(auth)));
 
   const PutAPI = (url: string, data: unknown, auth: boolean) =>
-    request(api.put(url, data, config(auth)));
+    mutate("put", url, data, auth);
 
   const PatchAPI = (url: string, data: unknown, auth: boolean) =>
-    request(api.patch(url, data, config(auth)));
+    mutate("patch", url, data, auth);
 
   const DeleteAPI = (url: string, auth: boolean) =>
-    request(api.delete(url, config(auth)));
+    mutate("delete", url, undefined, auth);
 
   return (
     <ApiContext.Provider

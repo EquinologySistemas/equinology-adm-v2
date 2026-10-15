@@ -13,6 +13,7 @@ export interface GetSubscriptionTransactionsParams {
 }
 
 export interface GetSubscriptionTransactionsResponse {
+  signaturesNotRead: number;
   transactions: SubscriptionTransaction[];
   total: number;
   page: number;
@@ -62,6 +63,8 @@ export async function getSubscriptionTransactions(
     const body = res.body as Record<string, unknown>;
     const rawList = body.transactions;
     return {
+      signaturesNotRead:
+        typeof body.signaturesNotRead === "number" ? body.signaturesNotRead : 0,
       transactions: Array.isArray(rawList)
         ? rawList.map((t: unknown) =>
             subscriptionTransactionFromApi(t as Record<string, unknown>),

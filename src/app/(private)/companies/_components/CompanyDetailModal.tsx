@@ -28,6 +28,8 @@ const companyFormSchema = z.object({
       "CEP deve ter 8 dígitos",
     ),
   walletId: z.string().optional(),
+  phone: z.string().optional(),
+  paymentResponsibleId: z.string().optional(),
 });
 
 type CompanyFormData = z.infer<typeof companyFormSchema>;
@@ -45,7 +47,10 @@ export function CompanyDetailModal({
   onClose,
   onSaved,
 }: CompanyDetailModalProps) {
-  const { PutAPI } = useApiContext();
+  const { PutAPI, GetAPI } = useApiContext();
+  const [users, setUsers] = useState<
+    { id: string; name: string; companyId: string; isDeleted?: boolean }[]
+  >([]);
   const [isEditing, setIsEditing] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -64,6 +69,8 @@ export function CompanyDetailModal({
       number: "",
       postalCode: "",
       walletId: "",
+      phone: "",
+      paymentResponsibleId: "",
     },
   });
 
@@ -79,9 +86,28 @@ export function CompanyDetailModal({
         number: company.number ?? "",
         postalCode: company.postalCode ? formatCEP(company.postalCode) : "",
         walletId: company.walletId ?? "",
+        phone: company.phone ?? "",
+        paymentResponsibleId: company.paymentResponsibleId ?? "",
       });
     }
   }, [open, company, reset]);
+
+  useEffect(() => {
+    if (!open || !company) return;
+    let cancelled = false;
+    void GetAPI("/admin/users", true).then((res) => {
+      if (!cancelled && res.status === 200)
+        setUsers(
+          (res.body.users ?? []).filter(
+            (u: { companyId: string; isDeleted?: boolean }) =>
+              u.companyId === company.id && !u.isDeleted,
+          ),
+        );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, company, GetAPI]);
 
   async function onSubmit(data: CompanyFormData) {
     if (!company) return;
@@ -89,6 +115,8 @@ export function CompanyDetailModal({
     const cnpjDigits = data.cnpj ? unmaskCNPJ(data.cnpj) : "";
     const payload: CompanyUpdatePayload = {
       name: data.name.trim(),
+      phone: data.phone?.trim() || null,
+      paymentResponsibleId: data.paymentResponsibleId || null,
       address: data.address?.trim() || undefined,
       number: data.number?.trim() || undefined,
       postalCode: data.postalCode
@@ -218,6 +246,28 @@ export function CompanyDetailModal({
           </>
         ) : (
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <label className="block text-sm">
+              Telefone da empresa
+              <input
+                type="tel"
+                {...register("phone")}
+                className="mt-1 w-full rounded-xl border px-4 py-2.5"
+              />
+            </label>
+            <label className="block text-sm">
+              Responsável financeiro
+              <select
+                {...register("paymentResponsibleId")}
+                className="mt-1 w-full rounded-xl border px-4 py-2.5"
+              >
+                <option value="">Usar primeiro usuário ativo</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name}
+                  </option>
+                ))}
+              </select>
+            </label>
             {submitError && (
               <p className="text-sm text-red-600">{submitError}</p>
             )}

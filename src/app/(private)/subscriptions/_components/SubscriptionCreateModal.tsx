@@ -34,6 +34,7 @@ export function SubscriptionCreateModal({
   const [companyId, setCompanyId] = useState("");
   const [planId, setPlanId] = useState("");
   const [couponId, setCouponId] = useState("");
+  const [paymentType, setPaymentType] = useState<"PIX" | "CREDIT_CARD">("PIX");
   const [yearly, setYearly] = useState(false);
   const [isTrial, setIsTrial] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -46,6 +47,7 @@ export function SubscriptionCreateModal({
     setPlanId("");
     setCouponId("");
     setYearly(false);
+    setPaymentType("PIX");
     setIsTrial(false);
     (async () => {
       const [companiesRes, plansRes, couponsRes] = await Promise.all([
@@ -88,9 +90,15 @@ export function SubscriptionCreateModal({
       return;
     }
     setSubmitting(true);
-    const payload: { yearly: boolean; isTrial: boolean; couponId?: string } = {
+    const payload: {
+      yearly: boolean;
+      isTrial: boolean;
+      couponId?: string;
+      paymentType: "PIX" | "CREDIT_CARD";
+    } = {
       yearly,
       isTrial,
+      paymentType,
     };
     if (couponId) {
       payload.couponId = couponId;
@@ -127,6 +135,21 @@ export function SubscriptionCreateModal({
     }
   }
 
+  const selectedPlan = plans.find((p) => p.id === planId);
+  const selectedCoupon = coupons.find((c) => c.id === couponId);
+  const unitPrice =
+    (paymentType === "CREDIT_CARD"
+      ? selectedPlan?.priceCard
+      : selectedPlan?.pricePix) ?? 0;
+  const basePrice = yearly
+    ? unitPrice * 12 * (1 - (selectedPlan?.annualDiscountPercent ?? 0) / 100)
+    : unitPrice;
+  const totalPrice = Math.max(
+    0,
+    selectedCoupon?.discountType === "PERCENT"
+      ? basePrice * (1 - selectedCoupon.discountPercentage / 100)
+      : basePrice - (selectedCoupon?.discountFixedAmount ?? 0),
+  );
   return (
     <Modal
       open={open}
@@ -214,6 +237,19 @@ export function SubscriptionCreateModal({
               <option value="yearly">Anual</option>
             </select>
           </div>
+          <label className="block text-sm">
+            Forma de pagamento
+            <select
+              value={paymentType}
+              onChange={(e) =>
+                setPaymentType(e.target.value as "PIX" | "CREDIT_CARD")
+              }
+              className="mt-1 w-full rounded-xl border px-4 py-2.5"
+            >
+              <option value="PIX">PIX</option>
+              <option value="CREDIT_CARD">Cartão de crédito</option>
+            </select>
+          </label>
           <div className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -248,6 +284,35 @@ export function SubscriptionCreateModal({
                 </option>
               ))}
             </select>
+          </div>
+          <div className="rounded-xl bg-[var(--dash-bg)] p-3 text-sm">
+            {isTrial ? (
+              <p>
+                Teste gratuito por {selectedPlan?.trialDays || 7} dias. Sem
+                cobrança.
+              </p>
+            ) : (
+              <>
+                <p>
+                  Valor por {yearly ? "ano" : "mês"}:{" "}
+                  <strong>
+                    {new Intl.NumberFormat("pt-BR", {
+                      style: "currency",
+                      currency: "BRL",
+                    }).format(totalPrice)}
+                  </strong>
+                </p>
+                <p>
+                  Primeiro vencimento: hoje. Renovação{" "}
+                  {yearly ? "anual" : "mensal"}.
+                </p>
+                <p>
+                  {selectedCoupon
+                    ? "O desconto será aplicado em todas as cobranças desta recorrência."
+                    : "As próximas cobranças usam o mesmo valor."}
+                </p>
+              </>
+            )}
           </div>
           <div className="flex flex-wrap gap-2 pt-2">
             <button

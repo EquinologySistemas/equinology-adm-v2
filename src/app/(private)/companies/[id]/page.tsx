@@ -1,4 +1,5 @@
 "use client";
+import { CompanyUserLimit } from "@/components/ui/CompanyUserLimit";
 
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { Pagination } from "@/components/ui/Pagination";
@@ -349,6 +350,7 @@ export default function CompanyPage() {
         />
         <Field label="Wallet ID" value={company?.walletId} />
       </dl>
+      <CompanyUserLimit companyId={String(id)} />
 
       <Section
         title="Assinaturas"

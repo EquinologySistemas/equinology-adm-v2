@@ -1,5 +1,6 @@
 "use client";
 
+import { AccountAccessActions } from "@/components/ui/AccountAccessActions";
 import { Modal } from "@/components/ui/Modal";
 import { useApiContext } from "@/context/ApiContext";
 import { formatDate } from "@/lib/date";
@@ -28,6 +29,7 @@ const userFormSchema = z.object({
   phone: z.string().optional(),
   role: z.enum(["ADMIN", "GESTOR", "COLABORADOR"]).optional(),
   companyId: z.string().optional(),
+  confirmPassword: z.string().optional(),
   newPassword: z
     .string()
     .optional()
@@ -117,6 +119,10 @@ export function UserDetailModal({
     };
     if (data.newPassword?.trim()) {
       payload.newPassword = data.newPassword;
+    }
+    if (data.newPassword && data.newPassword !== data.confirmPassword) {
+      setLoadError("A confirmação da senha não confere.");
+      return;
     }
     const res = await PatchAPI(`/admin/users/${user.id}`, payload, true);
     if (res.status === 200) {
@@ -270,6 +276,9 @@ export function UserDetailModal({
                 </dd>
               </div>
             </dl>
+            <div>
+              {!user.isDeleted && <AccountAccessActions id={user.id} />}
+            </div>
             <div className="flex flex-wrap gap-2 pt-2">
               {user.isDeleted ? (
                 <button
@@ -414,6 +423,15 @@ export function UserDetailModal({
                 Deixe em branco para não alterar a senha.
               </p>
             </div>
+            <label className="block text-sm">
+              Confirmar nova senha
+              <input
+                type="password"
+                autoComplete="new-password"
+                {...register("confirmPassword")}
+                className="mt-1 w-full rounded-xl border px-4 py-2.5"
+              />
+            </label>
             <div className="flex flex-wrap gap-2 pt-2">
               <button
                 type="submit"

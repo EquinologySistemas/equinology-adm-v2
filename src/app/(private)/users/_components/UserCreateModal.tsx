@@ -1,10 +1,11 @@
 "use client";
 
+import { CompanyUserLimit } from "@/components/ui/CompanyUserLimit";
 import { Modal } from "@/components/ui/Modal";
 import { useApiContext } from "@/context/ApiContext";
 import { formatPhone, unmaskPhone } from "@/lib/utils";
 import type { CompanyOption, UserCreatePayload } from "@/types/admin";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useEffect, useState } from "react";
@@ -91,6 +92,8 @@ export function UserCreateModal({
     })();
   }, [open, GetAPI]);
 
+  const selectedCompanyId = useWatch({ control, name: "companyId" });
+
   async function onSubmit(data: CreateUserFormData) {
     setSubmitError(null);
     const payload: UserCreatePayload = {
@@ -121,6 +124,7 @@ export function UserCreateModal({
       title="Novo usuário"
       className="max-w-lg"
     >
+      <CompanyUserLimit companyId={selectedCompanyId || ""} />
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {submitError && <p className="text-sm text-red-600">{submitError}</p>}
         <div>

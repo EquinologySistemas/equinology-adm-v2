@@ -50,6 +50,7 @@ export default function FinancialPage() {
   const [transactions, setTransactions] = useState<SubscriptionTransaction[]>(
     [],
   );
+  const [incomplete, setIncomplete] = useState(0);
   const [total, setTotal] = useState(0);
   const [summary, setSummary] = useState<FinancialSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -87,6 +88,7 @@ export default function FinancialPage() {
       if (summaryResult) setSummary(summaryResult);
 
       if (transactionsResult) {
+        setIncomplete(transactionsResult.signaturesNotRead);
         setTransactions(transactionsResult.transactions);
         setTotal(transactionsResult.total);
       } else {
@@ -222,6 +224,15 @@ export default function FinancialPage() {
 
   return (
     <div className="space-y-6">
+      {incomplete > 0 && (
+        <p
+          role="alert"
+          className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900"
+        >
+          Histórico incompleto: não foi possível consultar {incomplete}{" "}
+          assinatura(s). Atualize antes de fechar os valores.
+        </p>
+      )}
       <div>
         <h2 className="text-xl font-semibold text-[var(--dash-text)]">
           Financeiro

@@ -26,6 +26,7 @@ import { useEffect } from "react";
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/users", label: "Usuários", icon: Users },
+  { href: "/owners", label: "Proprietários", icon: Users },
   { href: "/companies", label: "Empresas", icon: Building2 },
   { href: "/plans", label: "Planos", icon: CreditCard },
   { href: "/coupons", label: "Cupons", icon: Ticket },
